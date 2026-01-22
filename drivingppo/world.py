@@ -1,0 +1,724 @@
+"""
+World는 이 패키지에서 중심이 되는 데이터를 다루는 클래스이다.
+Tank Challenge의 물리법칙을 모방한 가상의 세계이다.
+이 모듈은 이 패키지의 common 외 다른 모듈에 의존하지 않는다.
+"""
+from typing import Callable
+import math
+import numpy as np
+from numpy import ndarray as arr
+
+from .common import MAP_W as MAP_DEFAULT_W, MAP_H as MAP_DEFAULT_H
+
+idseq = 0
+
+pi = np.pi
+pi2 = pi*2
+rad_to_deg = 360/pi2
+deg_to_rad = pi2/360
+
+
+OBSTACLE_VALUE = 1
+
+
+'''
+x축은 왼쪽0에서 오른쪽
+z축은 아래0에서 위쪽
+x방향은 위0에서 시계방향
+'''
+
+def angle_of(x0, z0, x1, z1):
+    """
+    두 점의 절대 각도
+    """
+    dx = x1 - x0
+    dz = z1 - z0
+
+    absolute_angle = pi/2 - math.atan2(dz, dx)
+
+    return absolute_angle
+
+def distance_of(x0:float, z0:float, x1:float, z1:float):
+    return math.hypot(x0-x1, z0-z1)
+
+def rotate(x, z, ang):
+    rx =   x * math.cos(ang) + z * math.sin(ang)
+    rz = - x * math.sin(ang) + z * math.cos(ang)
+    return rx, rz
+
+def linspace(a, b, num):
+    step = (b-a)/num
+    r = [a + i * step for i in range(num)]
+    r.append(b)
+    return r
+
+
+# 장애물맵 불러오기 0or1 [w][h]
+def load_obstacle_map(map_file: str) -> tuple[arr, int, int]:
+    map_data = []
+
+    try:
+        with open(map_file, 'r') as f:
+            lines = [line.strip() for line in f if line.strip()]
+
+            if not lines:
+                raise ValueError("맵 파일이 비어있음.")
+
+            h = len(lines)
+            w = len(lines[0])
+
+            for i, line in enumerate(lines):
+                try:
+                    row = [int(c) for c in line]
+                except ValueError:
+                    raise ValueError(f"{i+1}번째 줄에 숫자(0 또는 1)가 아닌 문자가 포함됨.")
+
+                if len(row) != w:
+                    raise ValueError(
+                        f"{i+1}번째 줄의 열(Column) 개수 불일치: 기대값 {w}, 실제 {len(row)}"
+                    )
+
+                if any(c not in (0, 1) for c in row):
+                    raise ValueError(f"{i+1}번째 줄에 0 또는 1이 아닌 값이 포함됨.")
+
+                map_data.append(row)
+
+        print(f"INFO: 장애물 맵({w}*{h}) 불러옴.")
+        return np.array(map_data), w, h
+
+    except FileNotFoundError as e:
+        print(f"ERROR: 맵 파일({map_file})이 없음.", e)
+        raise e
+
+def create_empty_map(w, h) -> arr:
+    # 맵 0으로 초기화
+    return np.zeros((h, w), dtype=int)
+
+
+
+class LidarSensor:
+    def __init__(self,
+                 map_data:arr,
+                 max_range:int=5,
+                 num_rays:int=36,
+                 angle_start:float=0.0,
+                 angle_end:float=pi2):
+        """
+        :param map_data: 2D 배열 (0: 빈칸, 1: 장애물)
+        :param max_range: 라이다 최대 감지 거리
+        :param num_rays: 한 바퀴를 몇 등분 할 것인지
+        :angle_start: 스캔 시작 각도. 이 클래스에서 자동으로 정규화하지 않으니 값을 알아서 잘 넣을 것.
+        :angle_end: 스캔 끝 각도. 이 클래스에서 자동으로 정규화하지 않으니 값을 알아서 잘 넣을 것.
+        """
+        if max_range <= 0: raise ValueError('라이다의 레이저 최대거리가 0 이하입니다.')
+        if num_rays  <= 2: raise ValueError('라이다의 레이저 개수가 2 이하입니다.')
+
+        self.map_data = map_data
+        self.map_h = len(map_data)
+        self.map_w = len(map_data[0])
+        self.r = max_range
+        self.l = num_rays
+
+        self.scan_start = angle_start
+        self.scan_end   = angle_end
+        self.total_span = self.scan_end - self.scan_start
+        if self.total_span < 0: self.total_span += pi2
+        self.angle_step = self.total_span / (self.l-1)
+
+    def scan(self, x_start, z_start, angle_front) -> list[tuple[float, float, float, float, float, float, bool]]:
+        """
+        현재 차량 위치에서 360도 스캔.
+        DDA(Digital Differential Analyzer) Raycasting 개념을 활용한 최적화된 스캔: 그리드 경계만 검사하여 연산 속도를 대폭 향상시킵니다.
+
+        :return: [(angle_front, vertical_angle, distance, x,y,z, isDetected), ...]  Tank Challenge가 내보내는 CSV와 같은 순서대로.
+        """
+        results = []
+
+        ray_angle_start = self.scan_start + angle_front
+
+        for i in range(self.l):
+            ray_angle = ray_angle_start + i * self.angle_step  # 절대각도
+
+            sin_a = math.sin(ray_angle)
+            cos_a = math.cos(ray_angle)
+
+            # --- DDA 초기화 ---
+
+            # 현재 그리드 셀 (정수 좌표)
+            x = int(x_start)
+            z = int(z_start)
+
+            # 레이의 방향 (양수 또는 음수)
+            step_x = 1 if sin_a >= 0 else -1
+            step_z = 1 if cos_a >= 0 else -1
+
+            # X/Z 방향으로 1단위 이동하는데 필요한 레이의 길이 (최대값)
+            max_dist_x = abs(1.0 / (sin_a + 1e-9))
+            max_dist_z = abs(1.0 / (cos_a + 1e-9))
+
+            # 현재 위치에서 다음 그리드 경계까지의 레이 길이
+            # 다음 경계까지 남은 거리 (Fractional part)
+            if sin_a >= 0: dist_x = (x - x_start + 1.0) * max_dist_x
+            else:          dist_x = (x_start - x      ) * max_dist_x
+            if cos_a >= 0: dist_z = (z - z_start + 1.0) * max_dist_z
+            else:          dist_z = (z_start - z      ) * max_dist_z
+
+            hit = False
+            distance = 0.0
+
+            # --- DDA 주 루프 ---
+            while distance <= self.r:
+                if dist_x < dist_z: # X 경계에 먼저 도달
+                    distance = dist_x
+                    dist_x += max_dist_x
+                    x += step_x
+
+                else: # Z 경계에 먼저 도달
+                    distance = dist_z
+                    dist_z += max_dist_z
+                    z += step_z
+
+                # 맵 범위 검사: 맵 밖을 충돌로 취급
+                if not (0 <= x < self.map_w and 0 <= z < self.map_h):
+                    hit = True
+                    break
+
+                # 장애물 충돌 검사
+                if self.map_data[z, x] == 1:
+                    hit = True
+                    break
+
+            # 3. 결과 계산
+            distance = min(distance, self.r)  # 최대 거리를 초과하지 않도록 클리핑
+
+            # 충돌 지점의 절대 좌표 계산
+            final_x = x_start + sin_a * distance
+            final_z = z_start + cos_a * distance
+
+            # Tank Challenge의 CSV 형식 (angle, vertical_angle, distance, x, y, z, isDetected)
+            results.append((ray_angle - angle_front, 0.0, distance, final_x, 0.0, final_z, hit))
+
+        return results
+
+
+
+class Car:
+    """
+    차 한 대.
+    속성: 크기, 위치, 방향, 속도 등.
+    """
+    SPEED_MAX_W:float = 19.44
+    SPEED_MAX_S:float = -8.34
+
+    def __init__(self, init_status={}):
+        self.w = 1.5
+        self.h = 3
+
+        self.accel       = 0.001*  2.43
+        self.friction    = 0.001*  2.43
+        self.brake       = 0.001* 50
+        self.turn_speed  = 0.001* 40 * deg_to_rad
+
+        self.status = init_status
+
+    @property
+    def status(self):
+        # Tank Challenge의 /info 와 통일
+        return {
+            "playerPos":{
+                "x": self.x,
+                "y": self.y,
+                "z": self.z
+            },
+            "playerSpeed": self.speed,
+            "playerBodyX": self.angle_x * rad_to_deg,
+            "playerBodyY": 0,
+            "playerBodyZ": 0,
+            "playerHealth": 0,
+            "playerTurretX": 0,
+            "playerTurretY": 0,
+        }
+
+    @status.setter
+    def status(self, init_status):
+        # Tank Challenge의 /info 와 통일
+        # 기본값 0
+        pos   = init_status.get('playerPos', {})
+        self.x:float       = pos.get('x', 0)
+        self.y:float       = pos.get('y', 0)
+        self.z:float       = pos.get('z', 0)
+        self.angle_x:float = init_status.get('playerBodyX', 0) * deg_to_rad
+        self.speed:float   = init_status.get('playerSpeed', 0)
+
+    def speed_max_w(self, weight):
+        # 전진 최대속력
+        return weight * Car.SPEED_MAX_W
+
+    def speed_max_s(self, weight):
+        # 후진 최대속력 (음수)
+        return weight * Car.SPEED_MAX_S
+
+    def get_corners(self) -> list[tuple[float, float]]:
+        """
+        네 꼭지점 위치 (그리기용)
+        """
+        corners = []
+        for dx, dz in [(-self.w/2, self.h/2), (self.w/2, self.h/2), (self.w/2, -self.h/2), (-self.w/2, -self.h/2)]:
+            rx, rz = rotate(dx, dz, self.angle_x)
+            corners.append((self.x + rx, self.z + rz))
+        return corners
+
+    def get_points_to_check_collision(self):
+        """
+        충돌판정에 쓰이는 점
+        """
+        corners = self.get_corners()
+        points = []
+        num = 5
+        for i in range(len(corners)):
+            # 변 따라 점 몇 개씩
+            cx0, cz0 = corners[i]
+            cx1, cz1 = corners[(i+1)%len(corners)]
+            cxs = linspace(cx0, cx1, num)
+            czs = linspace(cz0, cz1, num)
+            points.extend([(cxs[k], czs[k]) for k in range(num+1)])
+        points.append((self.x, self.z))
+        return points
+
+
+    def control_w(self, weight, dt):
+        """
+        전진가속 동작
+        """
+        if weight < 0: return
+
+        max = self.speed_max_w(weight)
+
+        if self.speed < max:  # 최대속력보다 작음: 가속
+            self.speed += self.accel * weight * dt
+            if self.speed > max:
+                self.speed = max
+
+        if self.speed > max:  # 최대속력보다 큼: 감속
+            self.speed -= self.accel * weight * dt
+            if self.speed < 0:
+                self.speed = 0
+
+    def control_s(self, weight, dt):
+        """
+        후진가속 동작
+        """
+        if weight < 0: return
+
+        max = self.speed_max_s(weight)
+
+        if self.speed > max:  # 최대속력보다 작음: 가속
+            self.speed -= self.accel * weight * dt
+            if self.speed < max:
+                self.speed = max
+
+        if self.speed < max:  # 최대속력보다 큼: 감속
+            self.speed += self.accel * weight * dt
+            if self.speed > 0:
+                self.speed = 0
+
+    def control_stop(self, dt):
+        """
+        브레이크 동작
+        """
+        if self.speed > 0:
+            self.speed -= self.brake * dt
+            if self.speed < 0: self.speed = 0
+        elif self.speed < 0:
+            self.speed += self.brake * dt
+            if self.speed > 0: self.speed = 0
+
+    def control_friction(self, dt):
+        if self.speed > 0:
+            self.speed -= self.friction * dt
+            if self.speed < 0: self.speed = 0
+        elif self.speed < 0:
+            self.speed += self.friction * dt
+            if self.speed > 0: self.speed = 0
+
+    def control_ad(self, weight, dt):
+        """
+        선회 동작
+        """
+        self.angle_x = (self.angle_x + self.turn_speed * weight * dt) % pi2
+
+    def step(self, dt) -> bool:
+        """
+        속도와 각도에 따라 위치를 이동한다.
+        return 움직임 여부
+        """
+        if self.speed == 0: return False
+
+        move_step = self.speed * dt / 1000  # 이동거리 = 속도 * 시간
+
+        self.x += math.sin(self.angle_x) * move_step
+        self.z += math.cos(self.angle_x) * move_step
+
+        return True
+
+    def clone(self):
+        return Car(self.status)
+
+
+
+class World:
+    """
+    맵.
+    차.
+    충돌판정.
+    순서있는 목표점 목록.
+    XXX 코스트맵? 높이나 경사?
+    XXX 장애물 새로 발견하여 장애물맵 업데이트?
+    """
+    def __init__(self,
+                 wh:tuple[int, int]|None=None,
+                 player:Car|None=None,
+                 obstacle_map:arr|None=None,
+                 goal_points:list[tuple[float, float]]=[],
+                 config={}
+        ):
+        # 디버깅용 고유번호
+        global idseq
+        idseq += 1
+        self.id = idseq
+
+
+        self.init_config = config
+
+        self.near:float = config.get('near',  2.5)  # 목표점과의 거리가 이보다 작으면 도착 판정
+        self.far:float  = config.get('far',  12.0)  # 목표점과의 거리가 이보다 크면 길잃음 판정
+        self.lidar_real = config.get('lidar_real', True)
+        self.skip_past_waypoints:bool = config.get('skip_past_waypoints', False)  # 현재로부터 가장 가까운 waypoint로 건너뜀.
+        self.skip_waypoints_num:int   = config.get('skip_waypoints_num', 10)   # skip_past_waypoints에서 최대 몇 개를 건너뛸지
+
+        self.t_acc = 0  # 에피소드 경과시간(XXX 현재 스스로 업데이트하지 않고 WorldController에서 받아오는데... 현재는 info 내보낼 때만 씀. 경과시간 관리를 WorldController 말고 여기서 하는 게 맞는지 고민중.)
+
+        # 맵
+        # wh, obstacle_map 둘 중 하나를 지정하면 나머지는 자동, 둘 다 없으면 기본
+        if wh is None:
+            if obstacle_map is None:
+                self.MAP_W, self.MAP_H = MAP_DEFAULT_W, MAP_DEFAULT_H
+            else:
+                self.MAP_H, self.MAP_W = obstacle_map.shape
+        else:
+            self.MAP_W = wh[0]
+            self.MAP_H = wh[1]
+
+        if obstacle_map is None:
+            self.obstacle_map = create_empty_map(self.MAP_W, self.MAP_H)
+        else:
+            if (self.MAP_H, self.MAP_W) != obstacle_map.shape:
+                raise ValueError(f'World의 wh {(self.MAP_H, self.MAP_W)}, obstacle_map.shape {obstacle_map.shape} 크기 불일치')
+            self.obstacle_map = obstacle_map
+
+        # 플레이어
+        if player is None:
+            player = Car({
+                'pos': {'x': self.MAP_W/2, 'z': self.MAP_H/2}
+            })
+        self.player = player
+        self.player_collision = False
+        self.trace = [(self.player.x, self.player.z, 0.0)]
+        self.trace_count = 0
+        self.trace_max = 800
+        self.use_stop = config.get('use_stop', True)
+
+        # 라이다센서
+        self.lidar = LidarSensor(self.obstacle_map,
+                                 max_range=config.get('lidar_range', 30),
+                                 num_rays=config.get('lidar_raynum', 360),
+                                 angle_start=config.get('angle_start', 0),
+                                 angle_end=config.get('angle_end', pi2),)
+        self.lidar_scan()
+
+        # 목표점
+        self.__goal_points:list[tuple[float, float]] = goal_points
+        self.__current_goal_idx:int = 0
+
+        self.control_status = {  # '/get_action' 응답과 일치시킴
+            "moveWS":   {"command": "", "weight": 0},
+            "moveAD":   {"command": "", "weight": 0},
+            # XXX
+            # "turretQE": {"command": "", "weight": 0},
+            # "turretRF": {"command": "", "weight": 0},
+            # "fire": False,
+        }
+
+    def __str__(self):
+        return f"World-{self.id}({self.size})"
+
+    def __repr__(self):
+        return f"World-{self.id}({self.size})"
+
+    @property
+    def size(self):
+        return self.MAP_W, self.MAP_H
+
+    @property
+    def goal_points(self):
+        return self.__goal_points
+
+    @property
+    def path_len(self):
+        return len(self.__goal_points)
+
+    @property
+    def arrived(self) -> bool:
+        return self.current_goal_idx >= len(self.__goal_points)
+
+    @property
+    def lost(self) -> bool:
+        return self.get_distance_to_goal() > self.far
+
+    @goal_points.setter
+    def goal_points(self, goal_points:list[tuple[float, float]]):
+        self.__goal_points = goal_points
+        self.__current_goal_idx = 0
+
+    @property
+    def current_goal_idx(self):
+        return self.__current_goal_idx
+
+    @current_goal_idx.setter
+    def current_goal_idx(self, i:int):
+        if i < 0: i = 0
+        if i >= len(self.__goal_points): i = len(self.__goal_points)-1
+        self.__current_goal_idx = i
+
+    def next_goal(self):
+        if self.__current_goal_idx < self.path_len:
+            self.__current_goal_idx += 1
+        return self.__current_goal_idx
+
+
+    # 충돌 판정
+    def check_collision(self) -> bool:
+        result = self.check_collision_player()
+        self.player_collision = result
+        return result
+
+    def check_collision_player(self) -> bool:
+        # 맵밖에 나간 경우도 충돌 취급 및 못나가게 제한
+        outofmap = False
+        if self.player.x < 0:          self.player.x = 0;          outofmap = True
+        if self.player.z < 0:          self.player.z = 0;          outofmap = True
+        if self.player.x > self.MAP_W: self.player.x = self.MAP_W; outofmap = True
+        if self.player.z > self.MAP_H: self.player.z = self.MAP_H; outofmap = True
+        if outofmap: return True
+
+        # 플레이어 충돌 판정
+        player_points = self.player.get_points_to_check_collision()
+        for p in player_points:
+            x = p[0]
+            z = p[1]
+            if x >= 0 and x < self.MAP_W and z >= 0 and z < self.MAP_H:  # 맵 안의 점은 장애물맵으로 판정
+                if self.obstacle_map[int(z)][int(x)] == OBSTACLE_VALUE:
+                    return True
+            else:  # 맵밖은 충돌 판정
+                return True
+        return False
+
+    def moveWS(self, command:str, weight:float):
+        # weight = max(min(weight, 1.0), 0.1)  # Tank Challenge API 문서에는 0.1에서 1.0 사이라고 하지만 실제로는 다 됨.
+        self.control_status['moveWS']['command'] = command
+        self.control_status['moveWS']['weight']  = weight
+
+    def moveAD(self, command:str, weight:float):
+        # weight = max(min(weight, 1.0), 0.1)  # Tank Challenge API 문서에는 0.1에서 1.0 사이라고 하지만 실제로는 다 됨.
+        self.control_status['moveAD']['command'] = command
+        self.control_status['moveAD']['weight']  = weight
+
+
+    def lidar_scan(self):
+        # 라이다 계산이 시간이 제일 많이 걸리니까 장애물 없는 학습단계에서는 라이다 계산을 생략하려고 조건문 넣음.
+        p = self.player
+        l = self.lidar
+        if self.lidar_real:
+            self.lidar_points = l.scan(p.x, p.z, p.angle_x)
+        else:
+            self.lidar_points = [(l.scan_start + p.angle_x + i * l.angle_step,
+                                  0.0,
+                                  l.r,
+                                  p.x, 0.0, p.z,
+                                  False
+                                  ) for i in range(l.l)]
+        # print([f'{a:.1f}' for a, _, _, _, _, _, _ in self.lidar_points])
+        # [(angle, vertical_angle, distance, x,y,z, isDetected), ...]  Tank Challenge가 생성하는 csv 순서대로
+
+    def step(self, dt, callback:Callable|None=None) -> tuple[bool, bool, bool]:
+        """
+        Return: 플레이어 움직임?, 충돌?, 목표점도달?
+        """
+        if dt < 0: dt=0
+        self.t_acc += dt
+
+        self.control(dt)
+
+        p = self.player
+        result_p = p.step(dt)
+
+        if result_p: # 플레이어 움직임
+            self.trace_count += 1
+            if self.trace_count >= 3:
+                self.trace_count = 0
+                s = p.speed / (Car.SPEED_MAX_W  if p.speed > 0 else -Car.SPEED_MAX_S)
+                self.trace.append((p.x, p.z, s))
+            if len(self.trace) > self.trace_max: # 기록이 길면 오래된거 버림
+                self.trace = self.trace[-self.trace_max:]
+
+        result_collision = self.check_collision()
+
+        self.lidar_scan()
+
+        # 목표점 도달 판정
+        result_goal = False
+        while True:
+            if self.arrived:
+                break
+            distance = self.get_distance_to_goal()
+            if distance < self.near:
+                result_goal = True
+                self.next_goal()
+            else:
+                break
+
+        if self.skip_past_waypoints:
+            # 가야했던 경유지를 지나친 경우 생략. (최대 skip_waypoints_num개)
+            nearest_idx = self.__current_goal_idx
+            nearest_dist = self.get_distance_to_goal(0)
+            for i in range(1, min(self.skip_waypoints_num, len(self.__goal_points) - self.__current_goal_idx)):
+                dist = self.get_distance_to_goal(i)
+                if dist < nearest_dist:
+                    nearest_dist = dist
+                    nearest_idx = self.__current_goal_idx + i
+            self.__current_goal_idx = nearest_idx
+
+        if callback: callback(self)
+
+        return result_p, result_collision, result_goal
+
+
+    def control(self, dt):
+        """
+        조작상태에 따라 동작
+        """
+
+        ws = self.control_status.get('moveWS', None)
+        if ws:
+            command = ws.get('command', '')
+            weight  = ws.get('weight', 0)
+            if command == 'W':
+                self.player.control_w(weight, dt)
+            elif command == 'S':
+                self.player.control_s(weight, dt)
+            elif command == 'STOP' and self.use_stop:
+                self.player.control_stop(dt)
+            else:
+                self.player.control_friction(dt)
+        else:
+            self.moveWS('', 0)
+
+        ad = self.control_status.get('moveAD', None)
+        if ad:
+            command = ad.get('command', '')
+            weight  = ad.get('weight', 0)
+            if command == 'A':
+                self.player.control_ad(-weight, dt)
+            if command == 'D':
+                self.player.control_ad(weight, dt)
+        else:
+            self.moveAD('', 0)
+
+
+    def get_distance_to_goal(self, index_rel:int=0):
+        """
+        현재 플레이어 위치에서 현재 목표점까지 거리.
+        index: 몇 번째 목표점?(현재목표점 기준 즉 0이면 현재목표점) 범위 벗어나면 마지막 목표점의 것으로.
+        목표점이 없으면 마지막 목표점 반복.
+        """
+        if not self.__goal_points: return 0
+
+        index = self.__current_goal_idx + index_rel
+        if index >= len(self.__goal_points): index = len(self.__goal_points) - 1
+
+        tx, tz = self.__goal_points[index]
+        px, pz = self.player.x, self.player.z
+
+        return math.hypot(tx-px, tz-pz)
+
+    def _get_absolute_angle_to_goal(self, index:int):
+        """
+        현재 플레이어 위치에서 현재 목표점을 바라보는 방향의 절대 각도
+        """
+        tx, tz = self.__goal_points[index]
+        px, pz = self.player.x, self.player.z
+        return angle_of(px, pz, tx, tz)
+
+    def get_relative_angle_to_goal(self, index_rel:int=0):
+        """
+        현재 플레이어 위치에서 현재 목표점을 바라보는 방향의 상대 각도 -pi~pi
+        index_rel: 몇 번째 목표점?(현재목표점 기준 즉 0이면 현재목표점) 범위 벗어나면 마지막 목표점의 것으로.
+        목표점이 없으면 플레이어 위치를 목표점으로 취급하여 0.
+        """
+        if not self.__goal_points: return 0
+
+        index = self.__current_goal_idx + index_rel
+        if index >= len(self.__goal_points): index = len(self.__goal_points) - 1
+
+        abs_ang = self._get_absolute_angle_to_goal(index)
+        rel_ang = abs_ang - self.player.angle_x
+        rel_ang = (rel_ang + pi) % pi2 - pi
+
+        return rel_ang
+
+    @property
+    def obs_nearest_distance(self) -> float:
+        """
+        가장 가까운 라이다 거리
+        모두 hit=False이면 그냥 큰 수
+        """
+        return min([distance if h else 99999.9 for _,_, distance, _,_,_, h in self.lidar_points])
+
+    @property
+    def obs_nearest_angle(self) -> float:
+        """
+        가장 가까운 라이다 각도
+        모두 hit=False이면 -pi
+        """
+        result = -pi
+        d = 99999.9
+        for angle,_, distance, _,_,_, h in self.lidar_points:
+            if not h: continue
+            if distance <= d:
+                d = distance
+                result = angle
+        return result
+
+
+
+    @property
+    def info(self):
+        # Tank Challenge의 /info 와 통일
+        player_status = self.player.status
+        etc = {
+            'time': self.t_acc / 1000,
+        }
+        return player_status | etc
+
+
+    def clone(self):
+        o = World(
+            (self.MAP_W, self.MAP_H),
+            self.player.clone(),
+            self.obstacle_map.copy(),
+            self.__goal_points[:],
+            config=self.init_config
+        )
+        o.t_acc = self.t_acc
+        return o
+
