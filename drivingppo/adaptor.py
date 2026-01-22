@@ -31,7 +31,7 @@ class MyPpoAdaptor:
             self,
             model_path:str,
             obstacle_map:Arr|None=None,
-            goal_points=[],
+            waypoints=[],
             debugMode=False,
         ):
 
@@ -44,11 +44,11 @@ class MyPpoAdaptor:
 
         self.world = create_initial_world(
             obstacle_map=obstacle_map,
-            goal_points=goal_points,
+            waypoints=waypoints,
             # TODO x, z 좌표도 초기화?
         )
 
-        self.set_path(goal_points)
+        self.set_path(waypoints)
 
     def init(self, config):
         world = self.world
@@ -76,9 +76,9 @@ class MyPpoAdaptor:
 
     def set_path(self, path: Iterable):
         if path:
-            self.world.goal_points = list(map(tuple, path))
+            self.world.waypoints = list(map(tuple, path))
         else:
-            self.world.goal_points = []
+            self.world.waypoints = []
 
     def update_obstacle_map(self, obstacle_map: Arr):
         """
@@ -95,11 +95,11 @@ class MyPpoAdaptor:
 
         # 상태값
         observation = get_state(world)
-        if self.debugMode: print(observation_str(observation), f' / GOAL({world.current_goal_idx}/{len(world.goal_points)}): {world.get_relative_angle_to_goal()/pi2*360:.1f}, {world.get_distance_to_goal():.1f}')
+        if self.debugMode: print(observation_str(observation), f' / WPNT({world.waypoint_idx}/{len(world.waypoints)}): {world.get_relative_angle_to_wpoint()/pi2*360:.1f}, {world.get_distance_to_wpoint():.1f}')
 
         # 도착했으면 그냥 STOP
-        a0 = world.get_relative_angle_to_goal()
-        d0 = world.get_distance_to_goal()
+        a0 = world.get_relative_angle_to_wpoint()
+        d0 = world.get_distance_to_wpoint()
         if world.arrived:
             if DEBUG: print('도착', d0)
             return True, 0.0, 0.0
@@ -146,7 +146,7 @@ class MyPpoAdaptor:
 
 def create_initial_world(
         obstacle_map:Arr|None=None,
-        goal_points:list[tuple[float, float]]=[],
+        waypoints:list[tuple[float, float]]=[],
         blStartX:float=0,
         blStartY:float=0,
         blStartZ:float=0,
@@ -169,7 +169,7 @@ def create_initial_world(
             "playerBodyZ": 0,
         }),
         obstacle_map=obstacle_map,
-        goal_points=goal_points,
+        waypoints=waypoints,
         config={
             'lidar_raynum': LIDAR_NUM,
             'lidar_range': LIDAR_RANGE,

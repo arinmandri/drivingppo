@@ -379,7 +379,7 @@ class World:
                  wh:tuple[int, int]|None=None,
                  player:Car|None=None,
                  obstacle_map:arr|None=None,
-                 goal_points:list[tuple[float, float]]=[],
+                 waypoints:list[tuple[float, float]]=[],
                  config={}
         ):
         # 디버깅용 고유번호
@@ -437,8 +437,8 @@ class World:
         self.lidar_scan()
 
         # 목표점
-        self.__goal_points:list[tuple[float, float]] = goal_points
-        self.__current_goal_idx:int = 0
+        self.__waypoints:list[tuple[float, float]] = waypoints
+        self.__waypoint_idx:int = 0
 
         self.control_status = {  # '/get_action' 응답과 일치시킴
             "moveWS":   {"command": "", "weight": 0},
@@ -460,40 +460,40 @@ class World:
         return self.MAP_W, self.MAP_H
 
     @property
-    def goal_points(self):
-        return self.__goal_points
+    def waypoints(self):
+        return self.__waypoints
 
     @property
     def path_len(self):
-        return len(self.__goal_points)
+        return len(self.__waypoints)
 
     @property
     def arrived(self) -> bool:
-        return self.current_goal_idx >= len(self.__goal_points)
+        return self.waypoint_idx >= len(self.__waypoints)
 
     @property
     def lost(self) -> bool:
-        return self.get_distance_to_goal() > self.far
+        return self.get_distance_to_wpoint() > self.far
 
-    @goal_points.setter
-    def goal_points(self, goal_points:list[tuple[float, float]]):
-        self.__goal_points = goal_points
-        self.__current_goal_idx = 0
+    @waypoints.setter
+    def waypoints(self, waypoints:list[tuple[float, float]]):
+        self.__waypoints = waypoints
+        self.__waypoint_idx = 0
 
     @property
-    def current_goal_idx(self):
-        return self.__current_goal_idx
+    def waypoint_idx(self):
+        return self.__waypoint_idx
 
-    @current_goal_idx.setter
-    def current_goal_idx(self, i:int):
+    @waypoint_idx.setter
+    def waypoint_idx(self, i:int):
         if i < 0: i = 0
-        if i >= len(self.__goal_points): i = len(self.__goal_points)-1
-        self.__current_goal_idx = i
+        if i >= len(self.__waypoints): i = len(self.__waypoints)-1
+        self.__waypoint_idx = i
 
-    def next_goal(self):
-        if self.__current_goal_idx < self.path_len:
-            self.__current_goal_idx += 1
-        return self.__current_goal_idx
+    def next_wpoint(self):
+        if self.__waypoint_idx < self.path_len:
+            self.__waypoint_idx += 1
+        return self.__waypoint_idx
 
 
     # 충돌 판정
@@ -576,31 +576,31 @@ class World:
         self.lidar_scan()
 
         # 목표점 도달 판정
-        result_goal = False
+        result_wpoint = False
         while True:
             if self.arrived:
                 break
-            distance = self.get_distance_to_goal()
+            distance = self.get_distance_to_wpoint()
             if distance < self.near:
-                result_goal = True
-                self.next_goal()
+                result_wpoint = True
+                self.next_wpoint()
             else:
                 break
 
         if self.skip_past_waypoints:
             # 가야했던 경유지를 지나친 경우 생략. (최대 skip_waypoints_num개)
-            nearest_idx = self.__current_goal_idx
-            nearest_dist = self.get_distance_to_goal(0)
-            for i in range(1, min(self.skip_waypoints_num, len(self.__goal_points) - self.__current_goal_idx)):
-                dist = self.get_distance_to_goal(i)
+            nearest_idx = self.__waypoint_idx
+            nearest_dist = self.get_distance_to_wpoint(0)
+            for i in range(1, min(self.skip_waypoints_num, len(self.__waypoints) - self.__waypoint_idx)):
+                dist = self.get_distance_to_wpoint(i)
                 if dist < nearest_dist:
                     nearest_dist = dist
-                    nearest_idx = self.__current_goal_idx + i
-            self.__current_goal_idx = nearest_idx
+                    nearest_idx = self.__waypoint_idx + i
+            self.__waypoint_idx = nearest_idx
 
         if callback: callback(self)
 
-        return result_p, result_collision, result_goal
+        return result_p, result_collision, result_wpoint
 
 
     def control(self, dt):
@@ -635,42 +635,42 @@ class World:
             self.moveAD('', 0)
 
 
-    def get_distance_to_goal(self, index_rel:int=0):
+    def get_distance_to_wpoint(self, index_rel:int=0):
         """
         현재 플레이어 위치에서 현재 목표점까지 거리.
         index: 몇 번째 목표점?(현재목표점 기준 즉 0이면 현재목표점) 범위 벗어나면 마지막 목표점의 것으로.
         목표점이 없으면 마지막 목표점 반복.
         """
-        if not self.__goal_points: return 0
+        if not self.__waypoints: return 0
 
-        index = self.__current_goal_idx + index_rel
-        if index >= len(self.__goal_points): index = len(self.__goal_points) - 1
+        index = self.__waypoint_idx + index_rel
+        if index >= len(self.__waypoints): index = len(self.__waypoints) - 1
 
-        tx, tz = self.__goal_points[index]
+        tx, tz = self.__waypoints[index]
         px, pz = self.player.x, self.player.z
 
         return math.hypot(tx-px, tz-pz)
 
-    def _get_absolute_angle_to_goal(self, index:int):
+    def _get_absolute_angle_to_wpoint(self, index:int):
         """
         현재 플레이어 위치에서 현재 목표점을 바라보는 방향의 절대 각도
         """
-        tx, tz = self.__goal_points[index]
+        tx, tz = self.__waypoints[index]
         px, pz = self.player.x, self.player.z
         return angle_of(px, pz, tx, tz)
 
-    def get_relative_angle_to_goal(self, index_rel:int=0):
+    def get_relative_angle_to_wpoint(self, index_rel:int=0):
         """
         현재 플레이어 위치에서 현재 목표점을 바라보는 방향의 상대 각도 -pi~pi
         index_rel: 몇 번째 목표점?(현재목표점 기준 즉 0이면 현재목표점) 범위 벗어나면 마지막 목표점의 것으로.
         목표점이 없으면 플레이어 위치를 목표점으로 취급하여 0.
         """
-        if not self.__goal_points: return 0
+        if not self.__waypoints: return 0
 
-        index = self.__current_goal_idx + index_rel
-        if index >= len(self.__goal_points): index = len(self.__goal_points) - 1
+        index = self.__waypoint_idx + index_rel
+        if index >= len(self.__waypoints): index = len(self.__waypoints) - 1
 
-        abs_ang = self._get_absolute_angle_to_goal(index)
+        abs_ang = self._get_absolute_angle_to_wpoint(index)
         rel_ang = abs_ang - self.player.angle_x
         rel_ang = (rel_ang + pi) % pi2 - pi
 
@@ -716,7 +716,7 @@ class World:
             (self.MAP_W, self.MAP_H),
             self.player.clone(),
             self.obstacle_map.copy(),
-            self.__goal_points[:],
+            self.__waypoints[:],
             config=self.init_config
         )
         o.t_acc = self.t_acc

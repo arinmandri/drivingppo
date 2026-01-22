@@ -24,4 +24,3 @@ if __name__ == "__main__":
         time_accel=2,
         use_real_time=False,
         frame_delay=33)
-

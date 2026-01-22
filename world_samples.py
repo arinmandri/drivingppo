@@ -38,10 +38,10 @@ W_CONFIG = {
 """
 
 
-def gen_0():  return generate_random_world_plain(map_h=100 , map_w=100 , num=3, goal_dist_min=2,  goal_dist_max=3,  ang_init='p', ang_lim=pi*0.15, spd_init=0)
+def gen_0():  return generate_random_world_plain(map_h=100 , map_w=100 , num=3, wpoint_dist_min=2,  wpoint_dist_max=3,  ang_init='p', ang_lim=pi*0.15, spd_init=0)
 
-def gen_11():  return generate_random_world_plain(map_h=100, map_w=100, num=10, goal_dist_min=2,  goal_dist_max=5,  ang_init='p',    ang_lim=pi*0.15, spd_init=0)
-def gen_12():  return generate_random_world_plain(map_h=500, map_w=500, num=10, goal_dist_min=2,  goal_dist_max=10, ang_init='half', ang_lim=pi*0.3,  spd_init='rand')
+def gen_11():  return generate_random_world_plain(map_h=100, map_w=100, num=10, wpoint_dist_min=2,  wpoint_dist_max=5,  ang_init='p',    ang_lim=pi*0.15, spd_init=0)
+def gen_12():  return generate_random_world_plain(map_h=500, map_w=500, num=10, wpoint_dist_min=2,  wpoint_dist_max=10, ang_init='half', ang_lim=pi*0.3,  spd_init='rand')
 def gen_env_naive():
     choice = randint(0, 6)
     if choice < 2:
@@ -51,9 +51,9 @@ def gen_env_naive():
     else:
         return generate_world_square(randint(30, 50), randint(30, 50), num=4, padding=5)
 
-def gen_21(): return generate_random_world_plain(map_h=450, map_w=450, num=18, goal_dist_min=4,  goal_dist_max=15, ang_init='rand', ang_lim=pi*0.3, spd_init=0.0)
-def gen_22(): return generate_random_world_plain(map_h=300, map_w=300, num=7,  goal_dist_min=20, goal_dist_max=25, ang_init='rand', ang_lim=pi*0.8, spd_init='rand')
-def gen_23(): return generate_random_world_plain(map_h=150, map_w=150, num=3, goal_dist_min=20, goal_dist_max=29, ang_init='rand', ang_lim=pi*0.1, spd_init=0, pos_init='corner')
+def gen_21(): return generate_random_world_plain(map_h=450, map_w=450, num=18, wpoint_dist_min=4,  wpoint_dist_max=15, ang_init='rand', ang_lim=pi*0.3, spd_init=0.0)
+def gen_22(): return generate_random_world_plain(map_h=300, map_w=300, num=7,  wpoint_dist_min=20, wpoint_dist_max=25, ang_init='rand', ang_lim=pi*0.8, spd_init='rand')
+def gen_23(): return generate_random_world_plain(map_h=150, map_w=150, num=3, wpoint_dist_min=20, wpoint_dist_max=29, ang_init='rand', ang_lim=pi*0.1, spd_init=0, pos_init='corner')
 def gen_env_plain():
     choice = randint(0, 6)
     if choice < 2:
@@ -80,15 +80,15 @@ def gen_env_obs():
     else:
         return gen_env_plain()
 
-def gen_inv(): return generate_random_world_plain(map_h=150, map_w=150, num=5,  goal_dist_min=9,  goal_dist_max=10, ang_init='inv',  ang_lim=0.0,     spd_init=0)
+def gen_inv(): return generate_random_world_plain(map_h=150, map_w=150, num=5,  wpoint_dist_min=9,  wpoint_dist_max=10, ang_init='inv',  ang_lim=0.0,     spd_init=0)
 
 
 def generate_random_world_plain(
         map_w=MAP_W,
         map_h=MAP_H,
         num=15,
-        goal_dist_min=2,
-        goal_dist_max=20,
+        wpoint_dist_min=2,
+        wpoint_dist_max=20,
         ang_init:float|Literal['p', 'half', 'rand', 'inv']='p',
         ang_lim=pi*0.5,
         pos_init:Literal['corner', 'center']='center',
@@ -110,13 +110,13 @@ def generate_random_world_plain(
 
 
     # 목표점 생성
-    goal_points = generate_random_goal_points(num,
+    waypoints = generate_random_waypoints(num,
                                               map_w, map_h,
                                               px, pz,
                                               init_ang=init_ang,
                                               angle_change_limit=ang_lim,
-                                              min_dist=goal_dist_min,
-                                              max_dist=goal_dist_max)
+                                              min_dist=wpoint_dist_min,
+                                              max_dist=wpoint_dist_max)
 
     # 맵 생성
     obstacle_map = create_empty_map(map_w, map_h)
@@ -129,7 +129,7 @@ def generate_random_world_plain(
             'playerSpeed': pspeed,
         }),
         obstacle_map=obstacle_map,
-        goal_points=goal_points,
+        waypoints=waypoints,
         config=W_CONFIG|{
             'lidar_real': False
         }
@@ -142,8 +142,8 @@ def generate_random_world_obs_matrix(
         map_w=MAP_W,
         map_h=MAP_H,
         num=16,
-        goal_dist_min=5,
-        goal_dist_max=15,
+        wpoint_dist_min=5,
+        wpoint_dist_max=15,
         obs_dist=10,
     ) -> World:
 
@@ -153,13 +153,13 @@ def generate_random_world_obs_matrix(
     pangle_x = np.random.uniform(0, pi2)
 
     # 목표점 생성
-    goal_points = generate_random_goal_points(num,
+    waypoints = generate_random_waypoints(num,
                                               map_w, map_h,
                                               px, pz,
                                               pangle_x,
                                               angle_change_limit=pi*0.5,
-                                              min_dist=goal_dist_min,
-                                              max_dist=goal_dist_max)
+                                              min_dist=wpoint_dist_min,
+                                              max_dist=wpoint_dist_max)
 
     # 맵 생성
     obstacle_map = create_empty_map(map_w, map_h)
@@ -173,7 +173,7 @@ def generate_random_world_obs_matrix(
             'playerSpeed': pspeed,
         }),
         obstacle_map=obstacle_map,
-        goal_points=goal_points,
+        waypoints=waypoints,
         config=W_CONFIG|{
             'near': 2.8
         }
@@ -199,7 +199,7 @@ def generate_random_world_narrow(
     max_dist = hollow_radius * 2.0 - 1.5
 
     # 목표점 생성
-    goal_points = generate_random_goal_points(num,
+    waypoints = generate_random_waypoints(num,
                                               map_w, map_h,
                                               px, pz,
                                               init_ang=np.random.uniform(0, pi2),
@@ -208,7 +208,7 @@ def generate_random_world_narrow(
                                               max_dist=max_dist)
 
     # 맵 생성
-    obstacle_map = create_map_narrow(map_w, map_h, goal_points + [(px, pz)], hollow_radius=hollow_radius)
+    obstacle_map = create_map_narrow(map_w, map_h, waypoints + [(px, pz)], hollow_radius=hollow_radius)
 
     w = World(
         wh=(map_w, map_h),
@@ -218,7 +218,7 @@ def generate_random_world_narrow(
             'playerSpeed': pspeed,
         }),
         obstacle_map=obstacle_map,
-        goal_points=goal_points,
+        waypoints=waypoints,
         config=W_CONFIG|{
             'far': max_dist + 10.0
         }
@@ -241,7 +241,7 @@ def generate_random_world_obs_between(
     pangle_x = angle_of(px, pz, map_w/2, map_h/2)  # 맵 중앙을 보도록
 
     # 목표점 생성
-    goal_points = generate_random_goal_points(num,
+    waypoints = generate_random_waypoints(num,
                                               map_w, map_h,
                                               px, pz,
                                               pangle_x,
@@ -251,9 +251,9 @@ def generate_random_world_obs_between(
 
     # 맵 생성
     obstacle_map = create_empty_map(map_w, map_h)
-    add_obstacles_between_goals(obstacle_map, goal_points)
+    add_obstacles_between_wpoints(obstacle_map, waypoints)
 
-    empty_around_points(obstacle_map, goal_points, 5)
+    empty_around_points(obstacle_map, waypoints, 5)
 
     w = World(
         wh=(map_w, map_h),
@@ -263,7 +263,7 @@ def generate_random_world_obs_between(
             'playerSpeed': pspeed,
         }),
         obstacle_map=obstacle_map,
-        goal_points=goal_points,
+        waypoints=waypoints,
         config=W_CONFIG|{
             'far': max_dist + 10
         }
@@ -272,14 +272,14 @@ def generate_random_world_obs_between(
 
 
 
-def add_obstacles_between_goals(obstacle_map, goal_points):
+def add_obstacles_between_wpoints(obstacle_map, waypoints):
     """
     목표점 사이마다 장애물을 추가
     """
 
-    for i in range(len(goal_points)-1):
-        gx0, gz0 = goal_points[i]
-        gx1, gz1 = goal_points[i+1]
+    for i in range(len(waypoints)-1):
+        gx0, gz0 = waypoints[i]
+        gx1, gz1 = waypoints[i+1]
 
         distance = distance_of(gx0, gz0, gx1, gz1)
         obs_size = int(distance / 3) - 2
@@ -296,13 +296,13 @@ def add_obstacles_between_goals(obstacle_map, goal_points):
             obs_pos_z+int(obs_size/2))
 
 
-def create_map_narrow(w, h, goal_points, hollow_radius):
+def create_map_narrow(w, h, waypoints, hollow_radius):
     obs_radius = hollow_radius + 1
 
     obstacle_map = create_empty_map(w, h)
 
-    fill_around_points(obstacle_map, goal_points, obs_radius)
-    empty_around_points(obstacle_map, goal_points, hollow_radius)
+    fill_around_points(obstacle_map, waypoints, obs_radius)
+    empty_around_points(obstacle_map, waypoints, hollow_radius)
 
     return obstacle_map
 
@@ -343,7 +343,7 @@ def empty_around_points(map:Arr, points, radius):
         map[y_min:y_max, x_min:x_max][mask_hollow] = 0
 
 
-def generate_random_goal_points(
+def generate_random_waypoints(
         num,
         map_w, map_h,
         init_x, init_z,
@@ -356,7 +356,7 @@ def generate_random_goal_points(
 
     if min_dist > max_dist: raise Exception('min_dist >= max_dist')
 
-    goal_points = []
+    waypoints = []
 
     last_x = init_x
     last_z = init_z
@@ -381,7 +381,7 @@ def generate_random_goal_points(
         elif z >= map_h-margin: z = -z + (map_h - margin)*2
 
         # 좌표 추가
-        goal_points.append((x, z))
+        waypoints.append((x, z))
 
         # 랜덤 각도: 이전 각도에서 일정 이내로만 변화를 제한
         angle = angle_of(last_x, last_z, x, z) + np.random.uniform(-angle_change_limit, angle_change_limit)
@@ -390,7 +390,7 @@ def generate_random_goal_points(
         last_x = x
         last_z = z
 
-    return goal_points
+    return waypoints
 
 
 def add_obstacle(obstacle_map, x0, z0, x1, z1):
@@ -403,19 +403,19 @@ def add_obstacle(obstacle_map, x0, z0, x1, z1):
 
 
 
-def add_obstacles_near_goals(obstacle_map, p_xz, goal_points):
+def add_obstacles_near_wpoints(obstacle_map, p_xz, waypoints):
     """
     각 목표점 근처에 장애물을 하나씩 랜덤하게 추가하며,
     어떤 목표점과도 같은 위치에 배치되지 않도록 합니다.
 
     Args:
         obstacle_map (np.array): 맵의 2차원 배열
-        goal_points (list): [(x, z), ...] 형태의 목표점 리스트 (실수 좌표)
+        waypoints (list): [(x, z), ...] 형태의 목표점 리스트 (실수 좌표)
     """
     map_h, map_w = obstacle_map.shape
     SEARCH_RANGE = 15 # 목표점 주변 탐색 반경
 
-    for gx, gz in goal_points:
+    for gx, gz in waypoints:
         placed = False
         attempts = 0
         MAX_ATTEMPTS = 20
@@ -439,7 +439,7 @@ def add_obstacles_near_goals(obstacle_map, p_xz, goal_points):
             d_sq = np.square(obs_x-p_xz[0]) + np.square(obs_z-p_xz[1])
             if d_sq < margin_sq*3: break
             break_twice = False
-            for gx2, gz2 in goal_points:
+            for gx2, gz2 in waypoints:
                 d_sq = np.square(obs_x-gx2) + np.square(obs_z-gz2)
                 if d_sq < margin_sq:
                     break_twice = True
@@ -472,7 +472,7 @@ def generate_world_simpleLine(dist=50, h=4, end_margin=5, mid_num=3):
             'playerSpeed': 0.0,
         }),
         obstacle_map=create_empty_map(w, h),
-        goal_points = [(25 + dist/2 - mid_num/2 + i, z) for i in range(mid_num)] + [(w-end_margin, z)],
+        waypoints = [(25 + dist/2 - mid_num/2 + i, z) for i in range(mid_num)] + [(w-end_margin, z)],
         config=W_CONFIG|{
             'far': 999
         }
@@ -499,7 +499,7 @@ def generate_world_square(
                 'playerSpeed': 0.0,
             }),
             obstacle_map=create_empty_map(w, h),
-            goal_points = [ # 시계방향
+            waypoints = [ # 시계방향
                 (x1, z2)  if i%4==0  else
                 (x2, z2)  if i%4==1  else
                 (x2, z1)  if i%4==2  else
@@ -518,7 +518,7 @@ def generate_world_square(
                 'playerSpeed': 0.0,
             }),
             obstacle_map=create_empty_map(w, h),
-            goal_points = [ # 반시계방향
+            waypoints = [ # 반시계방향
                 (x2, z1)  if i%4==0  else
                 (x2, z2)  if i%4==1  else
                 (x1, z2)  if i%4==2  else

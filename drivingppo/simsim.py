@@ -271,8 +271,8 @@ class WorldViewer:
             'grid1': '#DDDDDD',
             'grid2': '#BBBBBB',
             'obstacle': '#444',
-            'goal': '#00EE88',
-            'goal_past': '#EEAA88',
+            'wpoint': '#00EE88',
+            'wpoint_past': '#EEAA88',
             'traceF_LUT': generate_lut('#EEEEEE', "#4499FF", WorldViewer.TRACE_LUT_SIZE), # 빠를 수록 진한색으로 표시
             'traceB_LUT': generate_lut('#EEEEEE', "#F877BB", WorldViewer.TRACE_LUT_SIZE),
             'lidar0': '#00EE00',
@@ -443,21 +443,21 @@ class WorldViewer:
                        fill='purple', width=1)
 
         # 목표점
-        goal_points = world.goal_points
-        for i in range(1, len(goal_points)): # 선
-            (p0x, p0z), (p1x, p1z) = goal_points[i-1], goal_points[i]
+        waypoints = world.waypoints
+        for i in range(1, len(waypoints)): # 선
+            (p0x, p0z), (p1x, p1z) = waypoints[i-1], waypoints[i]
             self.fcanvas.add_line(p0x, p0z, p1x, p1z,
-                           fill=c['goal'] if i>= world.current_goal_idx else c['goal_past'],
+                           fill=c['wpoint'] if i>= world.waypoint_idx else c['wpoint_past'],
                            width=2)
-        for i in range(world.current_goal_idx): # 점 - 통과
-            gx, gz = goal_points[i]
+        for i in range(world.waypoint_idx): # 점 - 통과
+            gx, gz = waypoints[i]
             self.fcanvas.add_cell_stone(gx, gz,
-                           c['goal_past'],
+                           c['wpoint_past'],
                            str(i+1), 'black')
-        for i in range(world.path_len-1, world.current_goal_idx-1, -1): # 점 - 미통과
-            gx, gz = goal_points[i]
+        for i in range(world.path_len-1, world.waypoint_idx-1, -1): # 점 - 미통과
+            gx, gz = waypoints[i]
             self.fcanvas.add_cell_stone(gx, gz,
-                           c['goal'],
+                           c['wpoint'],
                            str(i+1), 'black')
 
         # 플레이어
@@ -524,7 +524,7 @@ class WorldViewer:
  
             # max_risk = max([min(1/(d+1e-6)*100, 100) for _, _, d, _,_,_,_ in world.lidar_points]) # 현재 스텝의 최대 위험도
             # print(f'max_risk: {max_risk:.2f}')
-            text = f'목표({world.current_goal_idx}/{len(world.goal_points)}): {int(world.get_relative_angle_to_goal()*rad_to_deg)}° / {world.get_distance_to_goal():.1f}m  | 근접장애물 {int(world.obs_nearest_angle*rad_to_deg)}° / {world.obs_nearest_distance:.1f}m'
+            text = f'목표({world.waypoint_idx}/{len(world.waypoints)}): {int(world.get_relative_angle_to_wpoint()*rad_to_deg)}° / {world.get_distance_to_wpoint():.1f}m  | 근접장애물 {int(world.obs_nearest_angle*rad_to_deg)}° / {world.obs_nearest_distance:.1f}m'
             self.canvas.create_text(self.CANVAS_W/2, self.CANVAS_H, anchor="s",
                                     text=text, fill="black", font=("Consolas", 10))
 
@@ -604,7 +604,7 @@ class WorldController(WorldViewer):
 
             # 시프트 누른 채 클릭: 유일한 목표점으로 설정, API 호출
             if (event.state & 0x0001) != 0:  # 시프트키 누름
-                self.world.goal_points = [(world_x, world_z)]
+                self.world.waypoints = [(world_x, world_z)]
                 self.call_api_dest(world_x, world_z)
 
             # 컨트롤키 누른 채 클릭: 목표점 삭제
@@ -615,7 +615,7 @@ class WorldController(WorldViewer):
 
                 # 가장 가까운 점 찾기
                 min_dist = float('inf')
-                for i, (gx, gz) in enumerate(self.world.goal_points):
+                for i, (gx, gz) in enumerate(self.world.waypoints):
                     dist = distance_of(gx, gz, world_x, world_z) * self.scale
 
                     if dist < DELETE_THRESHOLD and dist < min_dist:
@@ -624,14 +624,14 @@ class WorldController(WorldViewer):
 
                 # 찾았으면 삭제
                 if target_idx != -1:
-                    removed_pt = self.world.goal_points.pop(target_idx)
+                    removed_pt = self.world.waypoints.pop(target_idx)
 
                     # 현재 목표 인덱스가 삭제된 인덱스보다 뒤에 있었다면 당겨주기.
-                    if self.world.current_goal_idx > target_idx:
-                        self.world.current_goal_idx -= 1
+                    if self.world.waypoint_idx > target_idx:
+                        self.world.waypoint_idx -= 1
 
             else:  # 목표점 추가
-                self.world.goal_points.append((world_x, world_z))
+                self.world.waypoints.append((world_x, world_z))
 
 
     def reset(self):
@@ -722,8 +722,8 @@ class WorldController(WorldViewer):
             if response and response.get("status") == "OK":
                 received_path = response.get("path", None)
                 if received_path:
-                    self.world.goal_points = received_path
-                    print(f"[Info] Goal points updated. Total points: {len(self.world.goal_points)}")
+                    self.world.waypoints = received_path
+                    print(f"[Info] Way points updated. Total points: {len(self.world.waypoints)}")
                 else:
                     print("[Error] Invalid path format received.", received_path)
             else:
@@ -816,14 +816,14 @@ def create_sample():
 
     # obstacle_map, w, h = load_obstacle_map('./map-50.txt')
 
-    goal_points = [(10, 100), (100, 150), (150, 100), (200, 200), (250, 250)]
-    goal_points = []
+    waypoints = [(10, 100), (100, 150), (150, 100), (200, 200), (250, 250)]
+    waypoints = []
 
     world = World(
         player=player,
         wh=(MAP_W, MAP_H),
     #   obstacle_map=obstacle_map,
-        goal_points=goal_points,
+        waypoints=waypoints,
         config={
             'lidar_range': 20,
             'lidar_raynum': 10,

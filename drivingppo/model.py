@@ -6,7 +6,7 @@ from .environment import WorldEnv
 from .common import (
     LIDAR_NUM,
     OBSERVATION_IND_SPD,
-    OBSERVATION_IND_GOAL_2,
+    OBSERVATION_IND_WPOINT_2,
     OBSERVATION_IND_SCALAR_S,
     OBSERVATION_IND_SCALAR_E,
     OBSERVATION_DIM_SCALAR,
@@ -43,12 +43,12 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
 
     def __init__(self, observation_space: gym.spaces.Box):
 
-        speed_and_goal1_dim = OBSERVATION_IND_GOAL_2 - OBSERVATION_IND_SPD
+        speed_and_wpoint1_dim = OBSERVATION_IND_WPOINT_2 - OBSERVATION_IND_SPD
         cnn_channel_num = 2
         feature0_dim = 32
         feature1_dim = 64
         feature2_dim = 128
-        total_feature_dim   = speed_and_goal1_dim + feature0_dim + feature1_dim + feature2_dim
+        total_feature_dim   = speed_and_wpoint1_dim + feature0_dim + feature1_dim + feature2_dim
 
         super(MyFeatureExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
 
@@ -68,21 +68,21 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
 
         self.layer2 = nn.Sequential(
             # 위치 정보 매핑 (Linear)
-            nn.Linear(speed_and_goal1_dim + feature1_dim, feature2_dim),
+            nn.Linear(speed_and_wpoint1_dim + feature1_dim, feature2_dim),
             nn.ReLU(),
         )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
 
-        speed_and_goal1 = observations[:, OBSERVATION_IND_SPD         : OBSERVATION_IND_GOAL_2]
+        speed_and_wpoint1 = observations[:, OBSERVATION_IND_SPD         : OBSERVATION_IND_WPOINT_2]
         scalar_data     = observations[:, OBSERVATION_IND_SCALAR_S    : OBSERVATION_IND_SCALAR_E]
         lidar_dis_data  = observations[:, OBSERVATION_IND_LIDAR_DIS_S : OBSERVATION_IND_LIDAR_DIS_E]
 
         output0 = self.layer0(scalar_data)
         output1 = self.layer1(lidar_dis_data.unsqueeze(1))
-        output2 = self.layer2(torch.cat((speed_and_goal1, output1), dim=1))
+        output2 = self.layer2(torch.cat((speed_and_wpoint1, output1), dim=1))
 
-        return torch.cat((speed_and_goal1, output0, output1, output2), dim=1)
+        return torch.cat((speed_and_wpoint1, output0, output1, output2), dim=1)
 
 
 

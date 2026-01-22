@@ -14,8 +14,8 @@ from .common import (
     LIDAR_RANGE,
     LOOKAHEAD_POINTS,
     OBSERVATION_IND_SPD,
-    OBSERVATION_IND_GOAL_0,
-    OBSERVATION_IND_GOAL_1,
+    OBSERVATION_IND_WPOINT_0,
+    OBSERVATION_IND_WPOINT_1,
     OBSERVATION_IND_LIDAR_DIS_S,
     OBSERVATION_IND_LIDAR_DIS_E,
     OBSERVATION_DIM,
@@ -62,12 +62,12 @@ def get_path_features(world:World) -> list[float]:
 
     # 각 목표점의 거리, 각도 정보
     for index in range(
-            world.current_goal_idx,
-            world.current_goal_idx + LOOKAHEAD_POINTS
+            world.waypoint_idx,
+            world.waypoint_idx + LOOKAHEAD_POINTS
         ):
         # 이전 목표점 기준
         if index < world.path_len:
-            x1, z1 = world.goal_points[index]
+            x1, z1 = world.waypoints[index]
             d_from_prev = distance_of(x0, z0, x1, z1)
             a1          = angle_of(x0, z0, x1, z1)
             a_from_prev = a1 - a0
@@ -79,8 +79,8 @@ def get_path_features(world:World) -> list[float]:
             a_from_prev = 0.0
 
         # 에이전트 기준
-        # d_from_agnt = world.get_distance_to_goal(index)
-        a_from_agnt = world.get_relative_angle_to_goal(index)
+        # d_from_agnt = world.get_distance_to_wpoint(index)
+        a_from_agnt = world.get_relative_angle_to_wpoint(index)
 
         a_fp_norm = ((a_from_prev + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
         a_fa_norm = ((a_from_agnt + pi) % pi2 - pi) / pi  # 각도(에이전트 기준)
@@ -93,20 +93,20 @@ def get_path_features(world:World) -> list[float]:
 
 def observation_str(observation):
     agent_speed     = observation[OBSERVATION_IND_SPD]
-    obs_goal_afp_0  = observation[OBSERVATION_IND_GOAL_0]
-    obs_goal_afa_0  = observation[OBSERVATION_IND_GOAL_0 +1]
-    obs_goal_dist_0 = observation[OBSERVATION_IND_GOAL_0 +4]
-    obs_goal_afp_1  = observation[OBSERVATION_IND_GOAL_1]
-    obs_goal_afa_1  = observation[OBSERVATION_IND_GOAL_1 +1]
-    obs_goal_dist_1 = observation[OBSERVATION_IND_GOAL_1 +4]
-    obs_goal_afp_2  = observation[OBSERVATION_IND_GOAL_1 + 4]
-    obs_goal_afa_2  = observation[OBSERVATION_IND_GOAL_1 + 4 +1]
-    obs_goal_dist_2 = observation[OBSERVATION_IND_GOAL_1 + 4 +4]
+    obs_wpoint_afp_0  = observation[OBSERVATION_IND_WPOINT_0]
+    obs_wpoint_afa_0  = observation[OBSERVATION_IND_WPOINT_0 +1]
+    obs_wpoint_dist_0 = observation[OBSERVATION_IND_WPOINT_0 +4]
+    obs_wpoint_afp_1  = observation[OBSERVATION_IND_WPOINT_1]
+    obs_wpoint_afa_1  = observation[OBSERVATION_IND_WPOINT_1 +1]
+    obs_wpoint_dist_1 = observation[OBSERVATION_IND_WPOINT_1 +4]
+    obs_wpoint_afp_2  = observation[OBSERVATION_IND_WPOINT_1 + 4]
+    obs_wpoint_afa_2  = observation[OBSERVATION_IND_WPOINT_1 + 4 +1]
+    obs_wpoint_dist_2 = observation[OBSERVATION_IND_WPOINT_1 + 4 +4]
     return f'STATE:  speed {agent_speed:+.2f}({speed_norm(agent_speed):+.2f})'\
            f' | Path'\
-           f' [0] a:{obs_goal_afp_0*pi*rad_to_deg:+5.2f}({obs_goal_afa_0*pi*rad_to_deg:+.2f}) d:{obs_goal_dist_0:.2f}'\
-           f' [1] a:{obs_goal_afp_1*pi*rad_to_deg:+5.2f}({obs_goal_afa_1*pi*rad_to_deg:+.2f}) d:{obs_goal_dist_1:.2f}'\
-           f' [2] a:{obs_goal_afp_2*pi*rad_to_deg:+5.2f}({obs_goal_afa_2*pi*rad_to_deg:+.2f}) d:{obs_goal_dist_2:.2f}'
+           f' [0] a:{obs_wpoint_afp_0*pi*rad_to_deg:+5.2f}({obs_wpoint_afa_0*pi*rad_to_deg:+.2f}) d:{obs_wpoint_dist_0:.2f}'\
+           f' [1] a:{obs_wpoint_afp_1*pi*rad_to_deg:+5.2f}({obs_wpoint_afa_1*pi*rad_to_deg:+.2f}) d:{obs_wpoint_dist_1:.2f}'\
+           f' [2] a:{obs_wpoint_afp_2*pi*rad_to_deg:+5.2f}({obs_wpoint_afa_2*pi*rad_to_deg:+.2f}) d:{obs_wpoint_dist_2:.2f}'
 
 def _distance_score_near(x:float) -> float:
     d = x + 10.0
@@ -154,7 +154,7 @@ class WorldEnv(gym.Env):
     World에서 주행법을 강화학습하기 위한 gym 환경 클래스.
     """
 
-    time_gain_per_goal_point = 10_000
+    time_gain_per_waypoint = 10_000
     time_gain_limit = 20_000
 
     def __init__(self,
@@ -227,14 +227,14 @@ class WorldEnv(gym.Env):
 
         apply_action(self.world, action)
         result_collision = False
-        result_goal = False
+        result_wpoint = False
         for _ in range(self.step_per_control):
-            _, result_collision_step, result_goal_step = w.step(self.time_step)
+            _, result_collision_step, result_wpoint_step = w.step(self.time_step)
             result_collision += result_collision_step
-            result_goal      += result_goal_step
+            result_wpoint      += result_wpoint_step
         if self.step_count == 1:
             if result_collision: print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 충돌 (hint: 목표점 수 {w.path_len})')
-            if result_goal:      print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 골 (hint: 목표점 수 {w.path_len})')
+            if result_wpoint:      print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 골 (hint: 목표점 수 {w.path_len})')
 
         observation1 = self.observation
 
@@ -245,9 +245,9 @@ class WorldEnv(gym.Env):
         ending = ''
 
         s_norm = speed_norm(p.speed)  # 속도점수
-        distance = w.get_distance_to_goal() +1
-        cos_a = math.cos(w.get_relative_angle_to_goal())
-        cos_a1 = math.cos(w.get_relative_angle_to_goal(1))
+        distance = w.get_distance_to_wpoint() +1
+        cos_a = math.cos(w.get_relative_angle_to_wpoint())
+        cos_a1 = math.cos(w.get_relative_angle_to_wpoint(1))
 
         obs0 = observation0[OBSERVATION_IND_LIDAR_DIS_S:OBSERVATION_IND_LIDAR_DIS_E].max()
         obs1 = observation1[OBSERVATION_IND_LIDAR_DIS_S:OBSERVATION_IND_LIDAR_DIS_E].max()
@@ -262,12 +262,12 @@ class WorldEnv(gym.Env):
             terminated = True
 
         # 목표점 도달
-        elif result_goal:
+        elif result_wpoint:
             reward_step[1] += 20.0 + 20.0 * cos_a1
-            if self.render_mode == 'debug': print(f'★ {reward_step[1]:.1f} ~ {int(round(w.get_relative_angle_to_goal(1))*rad_to_deg)}({cos_a1:.2f})')
+            if self.render_mode == 'debug': print(f'★ {reward_step[1]:.1f} ~ {int(round(w.get_relative_angle_to_wpoint(1))*rad_to_deg)}({cos_a1:.2f})')
 
             # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
-            self.time_limit += self.time_gain_per_goal_point
+            self.time_limit += self.time_gain_per_waypoint
             self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
 
             # 최종 목표 도달
@@ -301,7 +301,7 @@ class WorldEnv(gym.Env):
                 '💥' if ending == '충돌' else \
                 '👻' if ending == '길잃음' else \
                 '⏰' if ending == '시간초과' else '??'
-            print(f'결과{icon} 도착: {w.current_goal_idx:3d}/{w.path_len:3d} | 시간: {int(w.t_acc/1000):3d}/{int(self.time_limit/1000):3d}/{int(self.max_time/1000):3d} 초 ({int(w.t_acc/self.max_time*100):3d}%) | 위치: {int(p.x):4d}, {int(p.z):4d} ({int(p.x/self.world.MAP_W*100):3d}%, {int(p.z/self.world.MAP_H*100):3d}%)')
+            print(f'결과{icon} 도착: {w.waypoint_idx:3d}/{w.path_len:3d} | 시간: {int(w.t_acc/1000):3d}/{int(self.time_limit/1000):3d}/{int(self.max_time/1000):3d} 초 ({int(w.t_acc/self.max_time*100):3d}%) | 위치: {int(p.x):4d}, {int(p.z):4d} ({int(p.x/self.world.MAP_W*100):3d}%, {int(p.z/self.world.MAP_H*100):3d}%)')
 
         else:
             # 진행 보상
@@ -376,7 +376,7 @@ class WorldEnv(gym.Env):
         self.viewer.update()
 
     def print_result(self):
-        print(f'총점 {int(self.reward_totals[0]):5d} | goal {self.reward_totals[1]:6.1f} | time {self.reward_totals[2]:+7.2f} | prog {self.reward_totals[3]:+7.2f} | ang {self.reward_totals[4]:+7.2f} | danger {self.reward_totals[5]:+7.2f} ~ {self.reward_totals[6]:+7.2f}')
+        print(f'총점 {int(self.reward_totals[0]):5d} | wpoint {self.reward_totals[1]:6.1f} | time {self.reward_totals[2]:+7.2f} | prog {self.reward_totals[3]:+7.2f} | ang {self.reward_totals[4]:+7.2f} | danger {self.reward_totals[5]:+7.2f} ~ {self.reward_totals[6]:+7.2f}')
 
 
     def close(self):
