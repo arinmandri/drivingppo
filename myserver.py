@@ -1,13 +1,12 @@
-import os
-import sys
-# Make current working directory and its parent available for imports (fix relative import error)
-# sys.path.insert(0, os.path.abspath(os.getcwd()))
-# sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..')))
-from drivingppo.myppo import MyPpoWrapper
+"""
+Tank Challenge API
+https://bangbaedong-vallet-co-ltd.gitbook.io/tank-challenge/3.-api/3.2-api-docs
+"""
+from drivingppo.adaptor import MyPpoAdaptor
 from flask import Flask, request, jsonify
 
 
-modelW = MyPpoWrapper('./1.withobs.zip')
+modelW = MyPpoAdaptor('./ppo_world_checkpoints/drivingppo.zip')
 
 app = Flask(__name__)
 
@@ -50,14 +49,18 @@ def api_get_action():
     # turret_x = turret.get("x", 0)
     # turret_y = turret.get("y", 0)
 
-    act_w, act_s, act_ad = modelW.get_action(info)
-    ws_command = 'W' if act_w > act_s else 'S'
-    ws_weight  = act_w if act_w > act_s else act_s
-    ad_command = 'D'  if act_ad > 0.1  else 'A'  if act_ad < -0.1  else ''
-    ad_weight  = act_ad  if act_ad > 0.1  else -act_ad  if act_ad < -0.1  else 0
+    stop, ws, ad = modelW.get_action(info)
+
+    ws_command = "W"  if ws > 0.0  else "S"
+    ws_weight  = ws   if ws > 0.0  else -ws
+    ad_command = "D"  if ad > 0.0  else "A"
+    ad_weight  = ad   if ad > 0.0  else -ad
+    if stop:
+        ws_command = "STOP"
+        ws_weight  = 0.0
 
     return jsonify({
-        "moveWS": {"command":ws_command, "weight": ws_weight},
+        "moveWS": {"command": ws_command, "weight": ws_weight},
         "moveAD": {"command": ad_command, "weight": ad_weight},
         "turretQE": {"command": "", "weight": 0.0},
         "turretRF": {"command": "", "weight": 0.0},
@@ -73,7 +76,7 @@ def api_set_destination():
 
     try:
         x, y, z = map(float, data["destination"].split(","))
-        print(f"🎯 Destination set to: x={x}, y={y}, z={z}")
+        print(f"🚩 목적지 설정 ({x:.1f}, {y:.1f}, {z:.1f})")
         return jsonify({"status": "OK", "destination": {"x": x, "y": y, "z": z}})
     except Exception as e:
         return jsonify({"status": "ERROR", "message": f"Invalid format: {str(e)}"}), 400
@@ -85,8 +88,14 @@ def api_update_obstacle():
     if not data:
         return jsonify({'status': 'error', 'message': 'No data received'}), 400
 
-    print("🪨 Obstacle Data:", data)
-    return jsonify({'status': 'success', 'message': 'Obstacle data received'})
+    obss:list = data['obstacles']
+
+    if obss:
+        obs = obss[-1]
+        print(f"🪨 장애물 {len(obss)} 개  | 마지막거 위치: ({int(round(obs['x_min']))}~{int(round(obs['x_max']))}, {int(round(obs['z_min']))}~{int(round(obs['z_max']))})")
+    else:
+        print('🪨 장애물 없음')
+    return jsonify({"status": "success", "message": "Obstacle data received"})
 
 
 @app.route('/collision', methods=['POST']) 
@@ -95,13 +104,13 @@ def api_collision():
     if not data:
         return jsonify({'status': 'error', 'message': 'No collision data received'}), 400
 
-    object_name = data.get('objectName')
-    position = data.get('position', {})
-    x = position.get('x')
-    y = position.get('y')
-    z = position.get('z')
+    object_name = data.get("objectName")
+    position = data.get("position", {})
+    x = position.get("x")
+    y = position.get("y")
+    z = position.get("z")
 
-    print(f"💥 Collision Detected - Object: {object_name}, Position: ({x}, {y}, {z})")
+    print(f"💥 {object_name}와 충돌: (위치: {x:.1f}, {y:.1f}, {z:.1f})")
 
     return jsonify({'status': 'success', 'message': 'Collision data received'})
 
