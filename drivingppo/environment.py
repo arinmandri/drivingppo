@@ -16,6 +16,7 @@ from .common import (
     OBSERVATION_IND_SPD,
     OBSERVATION_IND_WPOINT_0,
     OBSERVATION_IND_WPOINT_1,
+    OBSERVATION_IND_WPOINT_2,
     OBSERVATION_IND_LIDAR_DIS_S,
     OBSERVATION_IND_LIDAR_DIS_E,
     OBSERVATION_DIM,
@@ -99,9 +100,9 @@ def observation_str(observation):
     obs_wpoint_afp_1  = observation[OBSERVATION_IND_WPOINT_1]
     obs_wpoint_afa_1  = observation[OBSERVATION_IND_WPOINT_1 +1]
     obs_wpoint_dist_1 = observation[OBSERVATION_IND_WPOINT_1 +4]
-    obs_wpoint_afp_2  = observation[OBSERVATION_IND_WPOINT_1 + 4]
-    obs_wpoint_afa_2  = observation[OBSERVATION_IND_WPOINT_1 + 4 +1]
-    obs_wpoint_dist_2 = observation[OBSERVATION_IND_WPOINT_1 + 4 +4]
+    obs_wpoint_afp_2  = observation[OBSERVATION_IND_WPOINT_2]
+    obs_wpoint_afa_2  = observation[OBSERVATION_IND_WPOINT_2 +1]
+    obs_wpoint_dist_2 = observation[OBSERVATION_IND_WPOINT_2 +4]
     return f'STATE:  speed {agent_speed:+.2f}({speed_norm(agent_speed):+.2f})'\
            f' | Path'\
            f' [0] a:{obs_wpoint_afp_0*pi*rad_to_deg:+5.2f}({obs_wpoint_afa_0*pi*rad_to_deg:+.2f}) d:{obs_wpoint_dist_0:.2f}'\

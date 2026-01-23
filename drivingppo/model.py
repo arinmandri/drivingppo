@@ -75,8 +75,8 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
 
         speed_and_wpoint1 = observations[:, OBSERVATION_IND_SPD         : OBSERVATION_IND_WPOINT_2]
-        scalar_data     = observations[:, OBSERVATION_IND_SCALAR_S    : OBSERVATION_IND_SCALAR_E]
-        lidar_dis_data  = observations[:, OBSERVATION_IND_LIDAR_DIS_S : OBSERVATION_IND_LIDAR_DIS_E]
+        scalar_data       = observations[:, OBSERVATION_IND_SCALAR_S    : OBSERVATION_IND_SCALAR_E]
+        lidar_dis_data    = observations[:, OBSERVATION_IND_LIDAR_DIS_S : OBSERVATION_IND_LIDAR_DIS_E]
 
         output0 = self.layer0(scalar_data)
         output1 = self.layer1(lidar_dis_data.unsqueeze(1))
