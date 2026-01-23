@@ -102,7 +102,8 @@ class LidarSensor:
                  max_range:int=5,
                  num_rays:int=36,
                  angle_start:float=0.0,
-                 angle_end:float=pi2):
+                 angle_end:float=pi2,
+                 map_border:bool=True):
         """
         :param map_data: 2D 배열 (0: 빈칸, 1: 장애물)
         :param max_range: 라이다 최대 감지 거리
@@ -118,6 +119,7 @@ class LidarSensor:
         self.map_w = len(map_data[0])
         self.r = max_range
         self.l = num_rays
+        self.map_border = map_border
 
         self.scan_start = angle_start
         self.scan_end   = angle_end
@@ -178,9 +180,13 @@ class LidarSensor:
                     dist_z += max_dist_z
                     z += step_z
 
-                # 맵 범위 검사: 맵 밖을 충돌로 취급
+                # 맵 범위 검사
                 if not (0 <= x < self.map_w and 0 <= z < self.map_h):
-                    hit = True
+                    if self.map_border:  # 맵 밖을 충돌로 취급
+                        hit = True
+                    else:
+                        hit = False  # 맵 경계에 충돌하지 않음
+                        distance = self.r
                     break
 
                 # 장애물 충돌 검사
@@ -393,6 +399,7 @@ class World:
         self.near:float = config.get('near',  2.5)  # 목표점과의 거리가 이보다 작으면 도착 판정
         self.far:float  = config.get('far',  12.0)  # 목표점과의 거리가 이보다 크면 길잃음 판정
         self.lidar_real = config.get('lidar_real', True)
+        self.map_border = config.get('map_border', True)  # 맵 경계와 부딪힌다고 판정
         self.skip_past_waypoints:bool = config.get('skip_past_waypoints', False)  # 현재로부터 가장 가까운 waypoint로 건너뜀.
         self.skip_waypoints_num:int   = config.get('skip_waypoints_num', 10)   # skip_past_waypoints에서 최대 몇 개를 건너뛸지
 
@@ -433,7 +440,9 @@ class World:
                                  max_range=config.get('lidar_range', 30),
                                  num_rays=config.get('lidar_raynum', 360),
                                  angle_start=config.get('angle_start', 0),
-                                 angle_end=config.get('angle_end', pi2),)
+                                 angle_end=config.get('angle_end', pi2),
+                                 map_border=self.map_border,
+                                 )
         self.lidar_scan()
 
         # 목표점
@@ -504,12 +513,13 @@ class World:
 
     def check_collision_player(self) -> bool:
         # 맵밖에 나간 경우도 충돌 취급 및 못나가게 제한
-        outofmap = False
-        if self.player.x < 0:          self.player.x = 0;          outofmap = True
-        if self.player.z < 0:          self.player.z = 0;          outofmap = True
-        if self.player.x > self.MAP_W: self.player.x = self.MAP_W; outofmap = True
-        if self.player.z > self.MAP_H: self.player.z = self.MAP_H; outofmap = True
-        if outofmap: return True
+        if self.map_border:
+            outofmap = False
+            if self.player.x < 0:          self.player.x = 0;          outofmap = True
+            if self.player.z < 0:          self.player.z = 0;          outofmap = True
+            if self.player.x > self.MAP_W: self.player.x = self.MAP_W; outofmap = True
+            if self.player.z > self.MAP_H: self.player.z = self.MAP_H; outofmap = True
+            if outofmap: return True
 
         # 플레이어 충돌 판정
         player_points = self.player.get_points_to_check_collision()
@@ -519,8 +529,8 @@ class World:
             if x >= 0 and x < self.MAP_W and z >= 0 and z < self.MAP_H:  # 맵 안의 점은 장애물맵으로 판정
                 if self.obstacle_map[int(z)][int(x)] == OBSTACLE_VALUE:
                     return True
-            else:  # 맵밖은 충돌 판정
-                return True
+            else:
+                if self.map_border: return True
         return False
 
     def moveWS(self, command:str, weight:float):

@@ -177,8 +177,9 @@ def create_initial_world(
             'angle_end': LIDAR_END,
             'near': 6.0,
             'far': 12.0,
+            'map_border': False,
             'skip_past_waypoints': True,
-            'skip_waypoints_num': 10,
+            'skip_waypoints_num': 3,
         }
     )
     return w

@@ -829,7 +829,8 @@ def create_sample():
             'lidar_raynum': 10,
             'angle_start': -pi/4,
             'angle_end': pi/4,
-            'use_stop': True
+            'use_stop': True,
+            'map_border': False,
     })
 
     return WorldController(
