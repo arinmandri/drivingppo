@@ -174,9 +174,7 @@ def generate_random_world_obs_matrix(
         }),
         obstacle_map=obstacle_map,
         waypoints=waypoints,
-        config=W_CONFIG|{
-            'near': 2.8
-        }
+        config=W_CONFIG
     )
     return w
 
