@@ -53,13 +53,16 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
         super(MyFeatureExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
 
         self.layer0 = nn.Sequential(
-            nn.Linear(OBSERVATION_DIM_SCALAR, feature0_dim),
+            nn.Linear(OBSERVATION_DIM_SCALAR, 32),
+            nn.ReLU(),
+            nn.Linear(32, feature0_dim),
             nn.ReLU(),
         )
 
         self.layer1 = nn.Sequential(
-            # 노이즈 제거 및 로컬 특징 추출
             nn.Conv1d(in_channels=1, out_channels=cnn_channel_num, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=cnn_channel_num, out_channels=cnn_channel_num, kernel_size=4, stride=2, padding=0),
             nn.ReLU(),
             nn.AdaptiveMaxPool1d(output_size=feature1_dim),
             nn.Flatten(),
@@ -154,7 +157,8 @@ def train_start(
 
     model.learn(
         total_timesteps=steps,
-        callback=checkpoint_callback
+        callback=checkpoint_callback,
+        progress_bar=True,
     )
 
     # 최종 모델 저장
@@ -179,7 +183,7 @@ def train_resume(
         log_std=None,
         lr=1e-4,
         gamma=0.99,
-        ent_coef=0.05,
+        ent_coef=0.0,
         seed=42
 ) -> PPO:
     """
@@ -220,16 +224,14 @@ def train_resume(
 
     if log_std:
         with torch.no_grad():
-            # log_std 값 덮어쓰기 (모델 구조에 따라 접근법이 다를 수 있으나 보통 아래와 같음)
             model.policy.log_std.fill_(log_std)
 
-    total_timesteps = steps + model.num_timesteps
-
-    print(f"=== 학습 재개 (현재 스텝: {model.num_timesteps} / 목표: {total_timesteps} / 남은: {steps}) ===")
+    print(f"=== 학습 재개 (현재 스텝: {model.num_timesteps} / 목표: {steps + model.num_timesteps} / 남은: {steps}) ===")
 
     model.learn(
-        total_timesteps=total_timesteps,
+        total_timesteps=steps,
         callback=checkpoint_callback,
+        progress_bar=True,
 
         reset_num_timesteps=False # 내부 타임스텝 카운터 초기화 여부
     )
@@ -237,7 +239,7 @@ def train_resume(
     # 최종 모델 저장
     if save_path:
         model.save(CHECKPOINT_DIR+save_path)
-        print(f"=== 학습 완료: {CHECKPOINT_DIR+save_path} ===")
+        print(f"=== 학습 완료 ({model.num_timesteps} 스텝): {CHECKPOINT_DIR+save_path} ===")
 
     vec_env.close()  # 환경 정리
 

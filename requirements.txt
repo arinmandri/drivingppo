@@ -2,3 +2,4 @@ Flask==3.1.2
 numpy==2.2.6
 gymnasium==1.2.2
 stable_baselines3==2.7.1
+ipywidgets

@@ -75,7 +75,7 @@ class MyPpoAdaptor:
         p.angle_x = 0
 
     def set_path(self, path: Iterable):
-        if path:
+        if len(path):#type:ignore
             self.world.waypoints = list(map(tuple, path))
         else:
             self.world.waypoints = []
@@ -176,10 +176,10 @@ def create_initial_world(
             'angle_start': LIDAR_START,
             'angle_end': LIDAR_END,
             'near': 6.0,
-            'far': 12.0,
+            'far': 30.0,  # smooth_los_distance(경로 단순화시 노드 사이 거리 최대값) 값보다 커야 함.
             'map_border': False,
             'skip_past_waypoints': True,
-            'skip_waypoints_num': 3,
+            'skip_waypoints_num': 10,
         }
     )
     return w
