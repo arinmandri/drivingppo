@@ -264,7 +264,7 @@ class WorldEnv(gym.Env):
         # 목표점 도달
         elif result_wpoint:
             reward_step[1] += 20.0 + 10.0 * cos_a1 + 7.0 * s_norm
-            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx+1}] {reward_step[1]:.1f} ~ {int(round(w.get_relative_angle_to_wpoint(1))*rad_to_deg)}({cos_a1:.2f})')
+            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ {int(round(w.get_relative_angle_to_wpoint(1))*rad_to_deg)}({cos_a1:.2f})')
 
             # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
             self.time_limit += self.time_gain_per_waypoint
