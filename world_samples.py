@@ -95,7 +95,12 @@ def generate_random_world_plain(
         ang_lim=pi*0.5,
         pos_init:Literal['corner', 'center']='center',
         spd_init:float|Literal['rand']=0,
-):
+        seed=None,
+    ):
+
+    if seed:
+        np.random.seed(seed)
+        random.seed(seed)
 
     if pos_init == 'center':
         px = map_w/2
@@ -148,7 +153,12 @@ def generate_random_world_obs_matrix(
         wpoint_dist_min=8,
         wpoint_dist_max=20,
         obs_dist=10,
+        seed=None,
     ) -> World:
+
+    if seed:
+        np.random.seed(seed)
+        random.seed(seed)
 
     px = (int(map_w/2/obs_dist) + 0.5)*obs_dist
     pz = (int(map_h/2/obs_dist) + 0.5)*obs_dist
@@ -191,7 +201,12 @@ def generate_random_world_narrow(
         num=15,
         hollow_radius=4,
         ang_lim=pi*0.3,
+        seed=None,
     ) -> World:
+
+    if seed:
+        np.random.seed(seed)
+        random.seed(seed)
 
     px = map_w/2
     pz = map_h/2
@@ -236,7 +251,12 @@ def generate_random_world_obs_between(
         num=6,
         min_dist=16,
         max_dist=20,
+        seed=None,
     ) -> World:
+
+    if seed:
+        np.random.seed(seed)
+        random.seed(seed)
 
     px = (randint(0, 1)*0.8 + 0.1) * map_w
     pz = (randint(0, 1)*0.8 + 0.1) * map_h
@@ -356,8 +376,13 @@ def generate_random_waypoints(
         angle_change_limit=pi/2,
         min_dist=2,
         max_dist=Car.SPEED_MAX_W,
-        margin:int=5
+        margin:int=5,
+        seed=None,
     ) -> list[tuple[float, float]]:
+
+    if seed:
+        np.random.seed(seed)
+        random.seed(seed)
 
     if min_dist > max_dist: raise Exception('min_dist >= max_dist')
 
@@ -408,7 +433,12 @@ def add_obstacle(obstacle_map, x0, z0, x1, z1):
 
 
 
-def add_obstacles_near_wpoints(obstacle_map, p_xz, waypoints):
+def add_obstacles_near_wpoints(
+        obstacle_map,
+        p_xz,
+        waypoints,
+        seed=None,
+    ):
     """
     각 목표점 근처에 장애물을 하나씩 랜덤하게 추가하며,
     어떤 목표점과도 같은 위치에 배치되지 않도록 합니다.
@@ -417,6 +447,11 @@ def add_obstacles_near_wpoints(obstacle_map, p_xz, waypoints):
         obstacle_map (np.array): 맵의 2차원 배열
         waypoints (list): [(x, z), ...] 형태의 목표점 리스트 (실수 좌표)
     """
+
+    if seed:
+        np.random.seed(seed)
+        random.seed(seed)
+
     map_h, map_w = obstacle_map.shape
     SEARCH_RANGE = 15 # 목표점 주변 탐색 반경
 
@@ -486,11 +521,17 @@ def generate_world_simpleLine(dist=50, h=4, end_margin=5, mid_num=3):
 
 
 def generate_world_square(
-    w=50,
-    h=30,
-    num=8,
-    padding=1,
-) -> World:
+        w=50,
+        h=30,
+        num=8,
+        padding=1,
+        seed=None,
+    ) -> World:
+
+    if seed:
+        np.random.seed(seed)
+        random.seed(seed)
+
     x1 = w*0.1 +padding
     x2 = w*0.9 -padding
     z1 = h*0.1 +padding
