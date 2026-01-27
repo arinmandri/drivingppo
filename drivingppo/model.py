@@ -59,9 +59,9 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
         )
 
         self.layer1 = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(in_channels=1, out_channels=4, kernel_size=2, stride=1, padding=1),
             nn.ReLU(),
-            nn.Conv1d(in_channels=2, out_channels=4, kernel_size=5, stride=2, padding=0),
+            nn.Conv1d(in_channels=4, out_channels=4, kernel_size=5, stride=2, padding=0),
             nn.ReLU(),
             nn.AdaptiveMaxPool1d(output_size=feature1_dim),
             nn.Flatten(),

@@ -75,14 +75,14 @@ def gen_env_plain():
 
 def gen_env_obs():
     if randint(0, 2):
-        choice = randint(0, 8)
-        if choice == 1:
+        choice = randint(0, 5)
+        if choice < 1:
             return generate_random_world_obs_matrix(num=11, obs_dist=randint(10, 18))
-        if choice == 2:
+        if choice < 2:
             return generate_random_world_narrow(num=9, hollow_radius=randint(4, 10))
-        if choice == 3:
+        if choice < 3:
             return generate_random_world_obs_between(num=6)
-        if choice < 9:
+        if choice < 4:
             return generate_world_square(randint(30, 50), randint(30, 50), num=4)
         else:
             return gen_env_naive()
