@@ -62,20 +62,27 @@ def gen_env_plain():
         if choice < 4:
             return gen_22()
         else:
-            return generate_random_world_narrow(num=9, hollow_radius=10)
+            # 왕초보 장애물
+            choice = randint(0, 2)
+            if choice == 0:
+                return generate_random_world_obs_matrix(num=11, obs_dist=20)
+            if choice == 1:
+                return generate_random_world_narrow(num=9, hollow_radius=10)
+            else:
+                return generate_world_square(randint(30, 50), randint(30, 50), padding=5, num=4)
     else:
         return gen_env_naive()
 
 def gen_env_obs():
-    if randint(0, 1):
+    if randint(0, 2):
         choice = randint(0, 8)
         if choice == 1:
             return generate_random_world_obs_matrix(num=11, obs_dist=randint(10, 18))
-        elif choice == 2:
+        if choice == 2:
             return generate_random_world_narrow(num=9, hollow_radius=randint(4, 10))
-        elif choice == 3:
+        if choice == 3:
             return generate_random_world_obs_between(num=6)
-        elif choice < 9:
+        if choice < 9:
             return generate_world_square(randint(30, 50), randint(30, 50), num=4)
         else:
             return gen_env_naive()

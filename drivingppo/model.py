@@ -44,7 +44,6 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
         speed_and_wpoint1_dim = OBSERVATION_IND_WPOINT_2 - OBSERVATION_IND_SPD
-        cnn_channel_num = 2
         feature0_dim = 32
         feature1_dim = 64
         feature2_dim = 128
@@ -60,13 +59,13 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
         )
 
         self.layer1 = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=cnn_channel_num, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Conv1d(in_channels=cnn_channel_num, out_channels=cnn_channel_num, kernel_size=4, stride=2, padding=0),
+            nn.Conv1d(in_channels=2, out_channels=4, kernel_size=5, stride=2, padding=0),
             nn.ReLU(),
             nn.AdaptiveMaxPool1d(output_size=feature1_dim),
             nn.Flatten(),
-            nn.Linear(cnn_channel_num * feature1_dim, feature1_dim)
+            nn.Linear(4 * feature1_dim, feature1_dim)
         )
 
         self.layer2 = nn.Sequential(
