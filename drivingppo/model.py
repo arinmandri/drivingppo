@@ -59,13 +59,12 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
         )
 
         self.layer1 = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=4, kernel_size=2, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(in_channels=4, out_channels=6, kernel_size=6, stride=2, padding=0),
-            nn.ReLU(),
-            nn.AdaptiveMaxPool1d(output_size=feature1_dim),
             nn.Flatten(),
-            nn.Linear(6 * feature1_dim, feature1_dim)
+            nn.Linear(LIDAR_NUM, 4 * LIDAR_NUM),
+            nn.ReLU(),
+            nn.Linear(4 * LIDAR_NUM, 6 * LIDAR_NUM // 2),
+            nn.ReLU(),
+            nn.Linear(6 * LIDAR_NUM // 2, feature1_dim)
         )
 
         self.layer2 = nn.Sequential(
@@ -81,7 +80,7 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
         lidar_dis_data    = observations[:, OBSERVATION_IND_LIDAR_DIS_S : OBSERVATION_IND_LIDAR_DIS_E]
 
         output0 = self.layer0(scalar_data)
-        output1 = self.layer1(lidar_dis_data.unsqueeze(1))
+        output1 = self.layer1(lidar_dis_data)
         output2 = self.layer2(torch.cat((speed_and_wpoint1, output1), dim=1))
 
         return torch.cat((speed_and_wpoint1, output0, output1, output2), dim=1)
