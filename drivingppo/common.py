@@ -7,7 +7,7 @@ SPD_MAX_STD = 10.0
 MAP_W = 300
 MAP_H = 300
 
-# [설계 파라미터]
+# 설계 파라미터
 LOOKAHEAD_POINTS = 4  # 경로 추종을 위한 앞의 N개 점
 EACH_POINT_INFO_SIZE = 4
 LIDAR_NUM   = 65
@@ -15,7 +15,7 @@ LIDAR_RANGE = 30
 LIDAR_START = -math.pi
 LIDAR_END   =  math.pi
 
-# 상태: 플레이어 속도(방향빼고) + 경로 점들, 라이다 거리점수, 라이다 최근접 거리점수, 라이다 최근접 각도
+# 상태
 OBSERVATION_IND_SPD        = 0
 OBSERVATION_IND_WPOINT_0   = 0 + 1
 OBSERVATION_IND_WPOINT_1   = 0 + 1 + (EACH_POINT_INFO_SIZE * 1)
