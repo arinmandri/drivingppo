@@ -1,4 +1,6 @@
-import math
+import math, random
+import numpy as np
+import torch
 
 SPEED_MAX_W:float = 19.44
 SPD_MAX_STD = 10.0
@@ -29,3 +31,19 @@ OBSERVATION_IND_LIDAR_DIS_E    = 0 + 1 + (EACH_POINT_INFO_SIZE * LOOKAHEAD_POINT
 OBSERVATION_DIM_LIDAR          = LIDAR_NUM
 
 OBSERVATION_DIM            = 0 + 1 + (EACH_POINT_INFO_SIZE * LOOKAHEAD_POINTS) + LIDAR_NUM
+
+
+def set_seed(seed):
+    """
+    seed 설정. 맵은 고정되는 듯.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    print("SEED SET", seed)
+
+# set_seed(0)
