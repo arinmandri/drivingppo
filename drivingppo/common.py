@@ -12,7 +12,7 @@ MAP_H = 300
 # 설계 파라미터
 LOOKAHEAD_POINTS = 4  # 경로 추종을 위한 앞의 N개 점
 EACH_POINT_INFO_SIZE = 4
-LIDAR_NUM   = 12 + 1
+LIDAR_NUM   = 8 + 1
 LIDAR_RANGE = 30
 LIDAR_START = -math.pi
 LIDAR_END   =  math.pi
