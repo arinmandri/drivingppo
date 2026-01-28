@@ -39,7 +39,7 @@ CAR_NEAR = 1.6  # 장애물 피하기 기능을 학습한다곤 해도 목적지
 """
 
 
-def gen_0():  return generate_random_world_plain(map_h=100 , map_w=100 , num=3, wpoint_dist_min=2,  wpoint_dist_max=3,  ang_init='p', ang_lim=pi*0.15, spd_init=0)
+def gen_0():  return generate_random_world_plain(map_h=100 , map_w=100 , num=5, wpoint_dist_min=2,  wpoint_dist_max=5,  ang_init='p', ang_lim=pi*0.15, spd_init=0)
 
 def gen_11():  return generate_random_world_plain(map_h=500, map_w=500, num=10, wpoint_dist_min=10,  wpoint_dist_max=15, ang_init='p',    ang_lim=pi*0.3,  spd_init=0)
 def gen_12():  return generate_random_world_plain(map_h=500, map_w=500, num=10, wpoint_dist_min=10,  wpoint_dist_max=15, ang_init='half', ang_lim=pi*0.15, spd_init='rand')
@@ -539,10 +539,25 @@ def generate_world_square(
         np.random.seed(seed)
         random.seed(seed)
 
-    x1 = w*0.1 +padding
-    x2 = w*0.9 -padding
-    z1 = h*0.1 +padding
-    z2 = h*0.9 -padding
+
+    x1 = int(round(w*0.1 +padding))
+    x2 = int(round(w*0.9 -padding))
+    z1 = int(round(h*0.1 +padding))
+    z2 = int(round(h*0.9 -padding))
+
+    obstacle_map = create_empty_map(w, h)
+    # 가운데 점?
+    obsType = randint(0, 2)
+    if obsType < 1:
+        obstacle_map[h//2, w//2] = OBSTACLE_VALUE
+    elif obsType < 2:
+        obsx1 = x1 + 10
+        obsx2 = x2 - 10
+        obsz1 = z1 + 10
+        obsz2 = z2 - 10
+        if obsx1 < obsx2  and obsz1 < obsz2:
+            obstacle_map[obsx1:obsx2, obsz1:obsz2] = OBSTACLE_VALUE
+
     if randint(0,1) == 1:
         world = World(
             wh=(w, h),
@@ -551,7 +566,7 @@ def generate_world_square(
                 'playerBodyX': 0.0,
                 'playerSpeed': 0.0,
             }),
-            obstacle_map=create_empty_map(w, h),
+            obstacle_map=obstacle_map,
             waypoints = [ # 시계방향
                 (x1, z2)  if i%4==0  else
                 (x2, z2)  if i%4==1  else
@@ -570,7 +585,7 @@ def generate_world_square(
                 'playerBodyX': 90.0,
                 'playerSpeed': 0.0,
             }),
-            obstacle_map=create_empty_map(w, h),
+            obstacle_map=obstacle_map,
             waypoints = [ # 반시계방향
                 (x2, z1)  if i%4==0  else
                 (x2, z2)  if i%4==1  else
