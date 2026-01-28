@@ -34,7 +34,7 @@ import numpy as np
 
 
 # 훈련 결과 저장
-LOG_DIR = "./ppo_tensorboard_logs/"
+LOG_DIR = f"./ppo_tensorboard_logs-{time.strftime('%y%m%d-%H%M')}/"
 CHECKPOINT_DIR = './ppo_world_checkpoints/'
 
 

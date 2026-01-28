@@ -1,4 +1,4 @@
 __pycache__
-ppo_tensorboard_logs/
+ppo_tensorboard_logs-*/
 ppo_world_checkpoints/
 training_log.txt
