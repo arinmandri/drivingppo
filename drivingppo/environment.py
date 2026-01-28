@@ -310,9 +310,10 @@ class WorldEnv(gym.Env):
             stat_progress     = + (cos_a * s_norm) * 0.3  if s_norm > 0 \
                            else - s_norm * s_norm * 1.5  # 후진 진행 억제
             stat_orientation  = + cos_a * 0.06
-            danger            = - obs1 * 0.09
+            danger            = - obs1 * 0.06
             danger_d          = - obs_d * 10.0
-            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:.1f} |  prog {stat_progress:.2f} | ang {stat_orientation:.2f} | danger {danger:.2f} ~  {danger_d:.2f}')
+            total = reward_time+stat_progress+stat_orientation+danger+danger_d
+            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ang {stat_orientation:+5.2f} | danger {danger:+5.2f} ~  {danger_d:+5.2f} --> {total:+6.2f}')
 
             reward_step[2] += self.step_per_control * reward_time
             reward_step[3] += self.step_per_control * stat_progress
