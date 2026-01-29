@@ -223,8 +223,11 @@ class WorldEnv(gym.Env):
 
         w = self.world
         p = w.player
-        l = w.lidar
 
+        ang_p  = w.get_relative_angle_to_wpoint()
+        cos_p  = math.cos(ang_p)
+
+        # 액션 적용
         apply_action(self.world, action)
         result_collision = False
         result_wpoint = False
@@ -246,8 +249,10 @@ class WorldEnv(gym.Env):
 
         s_norm = speed_norm(p.speed)  # 속도점수
         distance = w.get_distance_to_wpoint() +1
-        cos_a = math.cos(w.get_relative_angle_to_wpoint())
-        cos_a1 = math.cos(w.get_relative_angle_to_wpoint(1))
+        ang_0  = w.get_relative_angle_to_wpoint()
+        cos_a  = math.cos(ang_0)
+        ang_1  = w.get_relative_angle_to_wpoint(1)
+        cos_a1 = math.cos(ang_1)
 
         obs0 = observation0[OBSERVATION_IND_LIDAR_DIS_S:OBSERVATION_IND_LIDAR_DIS_E].max()
         obs1 = observation1[OBSERVATION_IND_LIDAR_DIS_S:OBSERVATION_IND_LIDAR_DIS_E].max()
@@ -263,8 +268,8 @@ class WorldEnv(gym.Env):
 
         # 목표점 도달
         elif result_wpoint:
-            reward_step[1] += 20.0 + 10.0 * cos_a1 + 7.0 * s_norm
-            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ {int(round(w.get_relative_angle_to_wpoint(1))*rad_to_deg)}({cos_a1:.2f})')
+            reward_step[1] += 10.0 + (10.0 * cos_p) + (10.0 * cos_a1) + (7.0 * s_norm)
+            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_p*rad_to_deg))}({cos_p:.2f}) | next_a {int(round(ang_1*rad_to_deg))}({cos_a1:.2f})')
 
             # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
             self.time_limit += self.time_gain_per_waypoint

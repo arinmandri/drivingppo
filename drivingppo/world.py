@@ -644,6 +644,9 @@ class World:
         else:
             self.moveAD('', 0)
 
+    def get_curr_wpoint(self, index_rel:int=0) -> tuple[float, float]:
+        index = self.__ind_rel_to_abs(index_rel)
+        return self.__waypoints[index]
 
     def get_distance_to_wpoint(self, index_rel:int=0):
         """
@@ -653,8 +656,7 @@ class World:
         """
         if not self.__waypoints: return 0
 
-        index = self.__waypoint_idx + index_rel
-        if index >= len(self.__waypoints): index = len(self.__waypoints) - 1
+        index = self.__ind_rel_to_abs(index_rel)
 
         tx, tz = self.__waypoints[index]
         px, pz = self.player.x, self.player.z
@@ -677,8 +679,7 @@ class World:
         """
         if not self.__waypoints: return 0
 
-        index = self.__waypoint_idx + index_rel
-        if index >= len(self.__waypoints): index = len(self.__waypoints) - 1
+        index = self.__ind_rel_to_abs(index_rel)
 
         abs_ang = self._get_absolute_angle_to_wpoint(index)
         rel_ang = abs_ang - self.player.angle_x
@@ -708,6 +709,14 @@ class World:
                 d = distance
                 result = angle
         return result
+    
+    def __ind_rel_to_abs(self, index_rel:int):
+        index = self.__waypoint_idx + index_rel
+        if index < 0:
+            return 0
+        if index >= len(self.__waypoints):
+            return len(self.__waypoints) - 1
+        return index
 
 
 

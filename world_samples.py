@@ -21,7 +21,7 @@ W_CONFIG = {
     'lidar_range':  LIDAR_RANGE,
     'angle_start':  LIDAR_START,
     'angle_end':    LIDAR_END,
-    'near': 1.8,
+    'near': 3.2,
     'far': 35.0,
 }
 CAR_NEAR = 1.6  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.
@@ -41,8 +41,8 @@ CAR_NEAR = 1.6  # 장애물 피하기 기능을 학습한다곤 해도 목적지
 
 def gen_0():  return generate_random_world_plain(map_h=100 , map_w=100 , num=1, wpoint_dist_min=10,  wpoint_dist_max=10,  ang_init='half', ang_lim=pi*0.15, spd_init=0)
 
-def gen_11():  return generate_random_world_plain(map_h=500, map_w=500, num=10, wpoint_dist_min=10,  wpoint_dist_max=15, ang_init='p',    ang_lim=pi*0.3,  spd_init=0)
-def gen_12():  return generate_random_world_plain(map_h=500, map_w=500, num=10, wpoint_dist_min=10,  wpoint_dist_max=15, ang_init='half', ang_lim=pi*0.15, spd_init='rand')
+def gen_11(): return generate_random_world_plain(map_h=300, map_w=300, num=10, wpoint_dist_min=5,  wpoint_dist_max=15, ang_init='p',    ang_lim=pi*0.6,  spd_init=0)
+def gen_12(): return generate_random_world_plain(map_h=300, map_w=300, num=7,  wpoint_dist_min=4,  wpoint_dist_max=15, ang_init='half', ang_lim=pi*0.2, spd_init='rand')
 def gen_env_naive():
     choice = randint(0, 4)
     if choice < 2:
@@ -52,26 +52,16 @@ def gen_env_naive():
     else:
         return gen_0()
 
-def gen_21(): return generate_random_world_plain(map_h=450, map_w=450, num=13, wpoint_dist_min=4,  wpoint_dist_max=25, ang_init='rand', ang_lim=pi*0.3, spd_init=0.0)
-def gen_22(): return generate_random_world_plain(map_h=450, map_w=450, num=7,  wpoint_dist_min=20, wpoint_dist_max=25, ang_init='rand', ang_lim=pi*0.8, spd_init='rand')
+def gen_21(): return generate_random_world_plain(map_h=300, map_w=300, num=13, wpoint_dist_min=4,  wpoint_dist_max=25, ang_init='rand', ang_lim=pi*0.9, spd_init=0.0)
 def gen_env_plain():
     if randint(0, 1):
-        choice = randint(0, 6)
-        if choice < 2:
             return gen_21()
-        if choice < 4:
-            return gen_22()
-        else:
-            # 왕초보 장애물
-            choice = randint(0, 2)
-            if choice == 0:
-                return generate_random_world_obs_matrix(num=11, obs_dist=20)
-            if choice == 1:
-                return generate_random_world_narrow(num=9, hollow_radius=10)
-            else:
-                return generate_world_square(randint(30, 50), randint(30, 50), padding=5, num=4)
     else:
-        return gen_env_naive()
+        choice = randint(0, 4)
+        if choice < 4:
+            return gen_env_naive()
+        else:
+            return generate_world_square(randint(30, 50), randint(30, 50), padding=5, num=4)
 
 def gen_env_obs():
     if randint(0, 2):
@@ -421,7 +411,8 @@ def generate_random_waypoints(
         waypoints.append((x, z))
 
         # 랜덤 각도: 이전 각도에서 일정 이내로만 변화를 제한
-        angle = angle_of(last_x, last_z, x, z) + np.random.uniform(-angle_change_limit, angle_change_limit)
+        angle_d = np.clip(np.random.normal(0, angle_change_limit/pi, 1), -angle_change_limit, angle_change_limit)
+        angle = angle_of(last_x, last_z, x, z) + angle_d
         angle = angle % pi2
 
         last_x = x
