@@ -2,8 +2,8 @@ from typing import Any
 import csv
 from collections.abc import Iterable
 
-from .common import MAP_W, MAP_H, LIDAR_NUM, LIDAR_RANGE, LIDAR_START, LIDAR_END
-from .world import World, Car, create_empty_map, pi2
+from .world import World, Car, angle_of, create_empty_map, pi, pi2, rad_to_deg
+from .common import LIDAR_NUM, LIDAR_RANGE, LIDAR_START, LIDAR_END, MAP_W, MAP_H
 from .environment import get_state, observation_str, apply_action, action_str
 
 import numpy as np
@@ -37,6 +37,9 @@ class MyPpoAdaptor:
 
         self.debugMode = debugMode
 
+        self.__poop_x = 0.0  # speed 부호 판별용
+        self.__poop_z = 0.0
+
         self.model = PPO.load(model_path)
 
         if obstacle_map is None:
@@ -45,7 +48,6 @@ class MyPpoAdaptor:
         self.world = create_initial_world(
             obstacle_map=obstacle_map,
             waypoints=waypoints,
-            # TODO x, z 좌표도 초기화?
         )
 
         self.set_path(waypoints)
@@ -84,18 +86,19 @@ class MyPpoAdaptor:
         """
         장애물맵을 업데이트한다.
         """
-        pass # TODO
+        self.world.obstacle_map = obstacle_map
 
     def get_action(self, info: dict[str, Any]) -> tuple[bool, float, float]:
 
         # 내부 World 상태 업데이트
         world = self.world
         world.player.status = info
+        self.__adjust_speed_of_pooping_tank_challenge()
         world.step(0.0)
 
         # 상태값
         observation = get_state(world)
-        if self.debugMode: print(observation_str(observation), f' / WPNT({world.waypoint_idx}/{len(world.waypoints)}): {world.get_relative_angle_to_wpoint()/pi2*360:.1f}, {world.get_distance_to_wpoint():.1f}')
+        if self.debugMode: print(observation_str(observation), f' / GOAL({world.waypoint_idx}/{len(world.waypoints)}): {world.get_relative_angle_to_wpoint()/pi2*360:.1f}, {world.get_distance_to_wpoint():.1f}')
 
         # 도착했으면 그냥 STOP
         a0 = world.get_relative_angle_to_wpoint()
@@ -125,7 +128,7 @@ class MyPpoAdaptor:
                 writer.writerow(row)
             if DEBUG: print(f'GOAL: {d0:.1f} / {a0*pi2/360:.1f} | ACTION: {ws:.1f}, {ad:.1f}')
 
-        apply_action(world, action)  # 확인용
+        if DEBUG: apply_action(world, action)  # 확인용
 
         return False, ws, ad
 
@@ -143,6 +146,24 @@ class MyPpoAdaptor:
         """
         return self.world.arrived
 
+    def __adjust_speed_of_pooping_tank_challenge(self):
+        # Tank Challenge에서는 후진 상태여도 speed가 양수로 들어온다. 전차 위치 변화를 보고 후진인지를 직접 판별하여 후진이면 spped를 음수로 바꿔줘야 함.
+        world = self.world
+
+        x0 = self.__poop_x
+        z0 = self.__poop_z
+        x1 = world.player.x
+        z1 = world.player.z
+
+        real_angle = angle_of(x0,z0,x1,z1)
+        info_angle = world.player.angle_x
+        angle_diff = (info_angle - real_angle + pi) % pi2 - pi
+
+        if angle_diff > pi/2: # 후진중
+            world.player.angle_x *= -1
+
+        self.__poop_x = x1
+        self.__poop_z = z1
 
 def create_initial_world(
         obstacle_map:Arr|None=None,
@@ -152,7 +173,7 @@ def create_initial_world(
         blStartZ:float=0,
 ) -> World:
     """
-    Tank Challenge /init 참고
+    원본 시뮬레이터 /init 참고
     """
 
     w = World(
@@ -177,9 +198,6 @@ def create_initial_world(
             'angle_end': LIDAR_END,
             'near': 6.0,
             'far': 30.0,  # smooth_los_distance(경로 단순화시 노드 사이 거리 최대값) 값보다 커야 함.
-            'map_border': False,
-            'skip_past_waypoints': True,
-            'skip_waypoints_num': 10,
         }
     )
     return w
