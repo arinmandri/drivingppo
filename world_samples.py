@@ -542,12 +542,12 @@ def generate_world_square(
     if obsType < 1:
         obstacle_map[h//2, w//2] = OBSTACLE_VALUE
     elif obsType < 2:
-        obsx1 = x1 + 10
-        obsx2 = x2 - 10
-        obsz1 = z1 + 10
-        obsz2 = z2 - 10
+        obsx1 = x1 + 7
+        obsx2 = x2 - 7
+        obsz1 = z1 + 7
+        obsz2 = z2 - 7
         if obsx1 < obsx2  and obsz1 < obsz2:
-            obstacle_map[obsx1:obsx2, obsz1:obsz2] = OBSTACLE_VALUE
+            obstacle_map[obsz1:obsz2, obsx1:obsx2] = OBSTACLE_VALUE
 
     if randint(0,1) == 1:
         world = World(
