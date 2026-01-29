@@ -39,7 +39,7 @@ CAR_NEAR = 1.6  # 장애물 피하기 기능을 학습한다곤 해도 목적지
 """
 
 
-def gen_0():  return generate_random_world_plain(map_h=100 , map_w=100 , num=5, wpoint_dist_min=2,  wpoint_dist_max=5,  ang_init='p', ang_lim=pi*0.15, spd_init=0)
+def gen_0():  return generate_random_world_plain(map_h=100 , map_w=100 , num=1, wpoint_dist_min=10,  wpoint_dist_max=10,  ang_init='half', ang_lim=pi*0.15, spd_init=0)
 
 def gen_11():  return generate_random_world_plain(map_h=500, map_w=500, num=10, wpoint_dist_min=10,  wpoint_dist_max=15, ang_init='p',    ang_lim=pi*0.3,  spd_init=0)
 def gen_12():  return generate_random_world_plain(map_h=500, map_w=500, num=10, wpoint_dist_min=10,  wpoint_dist_max=15, ang_init='half', ang_lim=pi*0.15, spd_init='rand')
