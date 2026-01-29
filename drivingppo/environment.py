@@ -224,8 +224,8 @@ class WorldEnv(gym.Env):
         w = self.world
         p = w.player
 
-        ang_p  = w.get_relative_angle_to_wpoint()
-        cos_p  = math.cos(ang_p)
+        ang_pv  = w.get_relative_angle_to_wpoint()
+        cos_pv  = math.cos(ang_pv)
 
         # 액션 적용
         apply_action(self.world, action)
@@ -249,10 +249,8 @@ class WorldEnv(gym.Env):
 
         s_norm = speed_norm(p.speed)  # 속도점수
         distance = w.get_distance_to_wpoint() +1
-        ang_0  = w.get_relative_angle_to_wpoint()
-        cos_a  = math.cos(ang_0)
-        ang_1  = w.get_relative_angle_to_wpoint(1)
-        cos_a1 = math.cos(ang_1)
+        ang_nx  = w.get_relative_angle_to_wpoint()
+        cos_nx  = math.cos(ang_nx)
 
         obs0 = observation0[OBSERVATION_IND_LIDAR_DIS_S:OBSERVATION_IND_LIDAR_DIS_E].max()
         obs1 = observation1[OBSERVATION_IND_LIDAR_DIS_S:OBSERVATION_IND_LIDAR_DIS_E].max()
@@ -268,8 +266,8 @@ class WorldEnv(gym.Env):
 
         # 목표점 도달
         elif result_wpoint:
-            reward_step[1] += 10.0 + (10.0 * cos_p) + (10.0 * cos_a1) + (7.0 * s_norm)
-            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_p*rad_to_deg))}({cos_p:.2f}) | next_a {int(round(ang_1*rad_to_deg))}({cos_a1:.2f})')
+            reward_step[1] += 10.0 + (10.0 * cos_pv) + (10.0 * cos_nx) + (7.0 * s_norm)
+            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f}) | next_a {int(round(ang_nx*rad_to_deg))}({cos_nx:.2f})')
 
             # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
             self.time_limit += self.time_gain_per_waypoint
@@ -282,7 +280,7 @@ class WorldEnv(gym.Env):
 
         # 전혀 엉뚱한 곳 감
         elif distance > w.far:
-            reward_step[2] += 100.0 * p.speed / SPD_MAX_STD * cos_a
+            reward_step[2] += 100.0 * p.speed / SPD_MAX_STD * cos_nx
             if self.render_mode == 'debug': print(f'LOST ({distance:.1f} > {w.far:.1f}) reward: {reward_step[2]:.2f}')
             ending = '길잃음'
             truncated = True
@@ -312,9 +310,9 @@ class WorldEnv(gym.Env):
 
             reward_time = -0.15
 
-            stat_progress     = + (cos_a * s_norm) * 0.3  if s_norm > 0 \
+            stat_progress     = + (cos_nx * s_norm) * 0.3  if s_norm > 0 \
                            else - s_norm * s_norm * 1.5  # 후진 진행 억제
-            stat_orientation  = + cos_a * 0.06
+            stat_orientation  = + cos_nx * 0.06
             danger            = - obs1 * 0.06
             danger_d          = - obs_d * 8.0
             total = reward_time+stat_progress+stat_orientation+danger+danger_d
