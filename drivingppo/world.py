@@ -217,8 +217,8 @@ class Car:
     SPEED_MAX_S:float = -8.34
 
     def __init__(self, init_status={}):
-        self.w = 1.5
-        self.h = 3
+        self.w = 3.7  # 전차 크기: https://bangbaedong-vallet-co-ltd.gitbook.io/tank-challenge/4.-faq/4.1-q-and-a
+        self.h = 8.1
 
         self.accel       = 0.001*  2.43
         self.friction    = 0.001*  2.43
