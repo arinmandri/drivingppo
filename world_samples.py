@@ -21,7 +21,7 @@ W_CONFIG = {
     'lidar_range':  LIDAR_RANGE,
     'angle_start':  LIDAR_START,
     'angle_end':    LIDAR_END,
-    'near': 2.5,
+    'near': 3.5,
     'far': 35.0,
 }
 CAR_NEAR = 1.5  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.
@@ -69,7 +69,7 @@ def gen_env_obs():
         if choice < 1:
             return generate_random_world_obs_matrix(num=11, obs_dist=randint(10, 18))
         if choice < 2:
-            return generate_random_world_narrow(num=9, hollow_radius=randint(4, 10))
+            return generate_random_world_narrow(num=9, hollow_radius=randint(10, 15))
         if choice < 3:
             return generate_random_world_obs_between(num=6)
         if choice < 4:
@@ -522,7 +522,7 @@ def generate_world_square(
         w=50,
         h=30,
         num=8,
-        padding=1,
+        padding=5,
         seed=None,
     ) -> World:
 
@@ -542,10 +542,10 @@ def generate_world_square(
     if obsType < 1:
         obstacle_map[h//2, w//2] = OBSTACLE_VALUE
     elif obsType < 2:
-        obsx1 = x1 + 7
-        obsx2 = x2 - 7
-        obsz1 = z1 + 7
-        obsz2 = z2 - 7
+        obsx1 = x1 + 10
+        obsx2 = x2 - 10
+        obsz1 = z1 + 10
+        obsz2 = z2 - 10
         if obsx1 < obsx2  and obsz1 < obsz2:
             obstacle_map[obsz1:obsz2, obsx1:obsx2] = OBSTACLE_VALUE
 
