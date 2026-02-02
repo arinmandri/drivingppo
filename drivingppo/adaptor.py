@@ -159,8 +159,8 @@ class MyPpoAdaptor:
         info_angle = world.player.angle_x
         angle_diff = (info_angle - real_angle + pi) % pi2 - pi
 
-        if angle_diff > pi/2: # 후진중
-            world.player.angle_x *= -1
+        if abs(angle_diff) > pi/2: # 후진중
+            world.player.speed *= -1
 
         self.__poop_x = x1
         self.__poop_z = z1
