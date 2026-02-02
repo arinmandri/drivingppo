@@ -15,7 +15,7 @@ from drivingppo.environment import SPD_MAX_STD
 MAP_W = 150
 MAP_H = 150
 
-NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 에이전트 대각선길이의 반  (1.5, 3)-->1.68
+NEAR = 3.0
 
 W_CONFIG = {
     'lidar_raynum': LIDAR_NUM,
@@ -25,7 +25,7 @@ W_CONFIG = {
     'near': NEAR,
     'far': 35.0,
 }
-CAR_NEAR = 1.2  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.
+CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.  # 에이전트 대각선길이의 반  (1.5, 3)-->1.68
 
 """
 생초보
@@ -42,8 +42,8 @@ CAR_NEAR = 1.2  # 장애물 피하기 기능을 학습한다곤 해도 목적지
 
 def gen_0():  return generate_random_world_plain(map_h=100 , map_w=100 , num=1, wpoint_dist_min=10,  wpoint_dist_max=10,  ang_init='half', ang_lim=0, spd_init=0)
 
-def gen_11(): return generate_random_world_plain(map_h=300, map_w=300, num=10, wpoint_dist_min=5,  wpoint_dist_max=15, ang_init='p',    ang_lim=pi*0.6,  spd_init=0)
-def gen_12(): return generate_random_world_plain(map_h=300, map_w=300, num=7,  wpoint_dist_min=4,  wpoint_dist_max=15, ang_init='half', ang_lim=pi*0.2, spd_init='rand')
+def gen_11(): return generate_random_world_plain(map_h=300, map_w=300, num=10, wpoint_dist_min=6,  wpoint_dist_max=15, ang_init='p',    ang_lim=pi*0.6,  spd_init=0)
+def gen_12(): return generate_random_world_plain(map_h=300, map_w=300, num=7,  wpoint_dist_min=6,  wpoint_dist_max=15, ang_init='half', ang_lim=pi*0.2, spd_init='rand')
 def gen_env_naive():
     choice = randint(0, 4)
     if choice < 2:
@@ -53,7 +53,7 @@ def gen_env_naive():
     else:
         return gen_0()
 
-def gen_21(): return generate_random_world_plain(map_h=300, map_w=300, num=13, wpoint_dist_min=4,  wpoint_dist_max=25, ang_init='rand', ang_lim=pi*0.9, spd_init=0.0)
+def gen_21(): return generate_random_world_plain(map_h=300, map_w=300, num=13, wpoint_dist_min=6,  wpoint_dist_max=25, ang_init='rand', ang_lim=pi*0.9, spd_init=0.0)
 def gen_env_plain():
     if randint(0, 1):
             return gen_21()
@@ -87,7 +87,7 @@ def generate_random_world_plain(
         map_w=MAP_W,
         map_h=MAP_H,
         num=15,
-        wpoint_dist_min=2,
+        wpoint_dist_min=NEAR*2,
         wpoint_dist_max=20,
         ang_init:float|Literal['p', 'half', 'rand', 'inv']='p',
         ang_lim=pi*0.5,
@@ -372,7 +372,7 @@ def generate_random_waypoints(
         init_x, init_z,
         init_ang,
         angle_change_limit=pi/2,
-        min_dist=2,
+        min_dist=2.0,
         max_dist=Car.SPEED_MAX_W,
         margin:int=5,
         seed=None,
