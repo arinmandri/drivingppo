@@ -215,10 +215,10 @@ class Car:
     """
     SPEED_MAX_W:float = 19.44
     SPEED_MAX_S:float = -8.34
+    w = 1.5
+    h = 3
 
     def __init__(self, init_status={}):
-        self.w = 1.5
-        self.h = 3
 
         self.accel       = 0.001*  2.43
         self.friction    = 0.001*  2.43
