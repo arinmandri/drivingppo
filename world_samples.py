@@ -75,6 +75,8 @@ def gen_env_obs():
             return generate_random_world_obs_between(num=6)
         if choice < 4:
             return generate_world_square(randint(30, 50), randint(30, 50), num=4)
+        if choice < 5:
+            return generate_world_zipper()
         else:
             return gen_env_naive()
     else:
@@ -588,4 +590,58 @@ def generate_world_square(
                 'far': 999
             }
         )
+    return world
+
+
+
+def generate_world_zipper(
+        h=60,
+        num=4,
+        interval=30,
+        wall_width=6,
+        pout_min=-2,
+        pout_max=4,
+        seed=None,
+    ) -> World:
+
+    if seed:
+        np.random.seed(seed)
+        random.seed(seed)
+
+    if wall_width >= interval: raise ValueError('wall_width >= interval')
+    if pout_min > pout_max:    raise ValueError('pout_min > pout_max')
+
+    w = (num+2) * interval
+
+    wpoint_x0 = interval * 2
+    wall_x0 = int(interval * 1.5)
+
+    obstacle_map = create_empty_map(w, h)
+
+    for i in range(0, num, 2):
+        wall_x = wall_x0 + interval * i
+        obstacle_map[
+            0 : h//2 + randint(pout_min, pout_max),
+            wall_x - wall_width//2 : wall_x + int((wall_width+1)/2)
+        ] = 1
+    for i in range(1, num, 2):
+        wall_x = wall_x0 + interval * i
+        obstacle_map[
+            h//2- randint(pout_min, pout_max) : h,
+            wall_x - wall_width//2 : wall_x + int((wall_width+1)/2)
+        ] = 1
+
+    world = World(
+        wh=(w, h),
+        player=Car({
+            'playerPos': {'x': interval, 'z': h/2},
+            'playerBodyX': 90.0,
+            'playerSpeed': 0.0,
+        }),
+        obstacle_map=obstacle_map,
+        waypoints = [(wpoint_x0 + interval * i, h/2) for i in range(num)],
+        config=W_CONFIG|{
+            'far': 999
+        }
+    )
     return world
