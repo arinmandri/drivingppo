@@ -68,11 +68,11 @@ def gen_env_obs():
     if randint(0, 2):
         choice = randint(0, 5)
         if choice < 1:
-            return generate_random_world_obs_matrix(num=11, obs_dist=randint(10, 18))
+            return generate_random_world_obs_matrix(70, 70, num=11, obs_dist=randint(10, 18))
         if choice < 2:
-            return generate_random_world_narrow(num=9, hollow_radius=randint(4, 10))
+            return generate_random_world_narrow(150, 150, num=9, hollow_radius=randint(4, 9))
         if choice < 3:
-            return generate_random_world_obs_between(num=6)
+            return generate_random_world_obs_between(100, 100, num=6)
         if choice < 4:
             return generate_world_square(randint(30, 50), randint(30, 50), num=4)
         if choice < 5:
@@ -199,8 +199,10 @@ def generate_random_world_narrow(
         map_w=MAP_W,
         map_h=MAP_H,
         num=15,
-        hollow_radius=4,
-        ang_lim=pi*0.3,
+        min_dist=10,
+        max_dist=20,
+        hollow_radius=6,
+        ang_lim=pi*0.8,
         seed=None,
     ) -> World:
 
@@ -213,20 +215,17 @@ def generate_random_world_narrow(
     pspeed = 0
     pangle_x = np.random.uniform(0, pi2)
 
-    min_dist = hollow_radius
-    max_dist = hollow_radius * 2.0 - 1.5
-
     # 목표점 생성
     waypoints = generate_random_waypoints(num,
-                                              map_w, map_h,
-                                              px, pz,
-                                              init_ang=np.random.uniform(0, pi2),
-                                              angle_change_limit=ang_lim,
-                                              min_dist=min_dist,
-                                              max_dist=max_dist)
+                                          map_w, map_h,
+                                          px, pz,
+                                          init_ang=np.random.uniform(0, pi2),
+                                          angle_change_limit=ang_lim,
+                                          min_dist=min_dist,
+                                          max_dist=max_dist)
 
     # 맵 생성
-    obstacle_map = create_map_narrow(map_w, map_h, waypoints + [(px, pz)], hollow_radius=hollow_radius)
+    obstacle_map = create_map_narrow(map_w, map_h, [(px, pz)] + waypoints, hollow_radius=hollow_radius)
 
     w = World(
         wh=(map_w, map_h),
@@ -320,53 +319,67 @@ def add_obstacles_between_wpoints(obstacle_map, waypoints):
             obs_pos_z+int(obs_size/2))
 
 
-def create_map_narrow(w, h, waypoints, hollow_radius):
+def create_map_narrow(w, h, points, hollow_radius):
     obs_radius = hollow_radius + 1
 
     obstacle_map = create_empty_map(w, h)
 
-    fill_around_waypoints(obstacle_map, waypoints, obs_radius)
-    empty_around_waypoints(obstacle_map, waypoints, hollow_radius)
+    midpoints = with_midpoints(points, 10)
+    fill_around_waypoints(obstacle_map, midpoints, obs_radius)
+    empty_around_waypoints(obstacle_map, midpoints, hollow_radius)
 
     return obstacle_map
 
 
+
+def with_midpoints(points:list[tuple[float,float]], n:int=2) -> list[tuple[float,float]]:
+    px0, pz0 = points[0]
+    result = []
+    for px, pz in points[1:]:
+        pxd = (px - px0) / n
+        pzd = (pz - pz0) / n
+        for i in range(n):
+            result.append((px0+pxd*i, pz0+pzd*i))
+        px0 = px
+        pz0 = pz
+    result.append(points[-1])
+    return result
 
 def fill_around_waypoints(map:Arr, points, r=CAR_NEAR):
     h, w = map.shape
     r_2 = r**2
 
     # 둘레 채움
-    for px, py in points:
-        px, py = int(px), int(py)
+    for px, pz in points:
+        px, pz = int(px), int(pz)
 
-        y_min = int(round(max(0, min(h, py - r))))
-        y_max = int(round(max(0, min(h, py + r + 1))))
+        z_min = int(round(max(0, min(h, pz - r))))
+        z_max = int(round(max(0, min(h, pz + r + 1))))
         x_min = int(round(max(0, min(w, px - r))))
         x_max = int(round(max(0, min(w, px + r + 1))))
 
-        y_grid, x_grid = np.ogrid[y_min:y_max, x_min:x_max]
-        mask_obs = (x_grid - px)**2 + (y_grid - py)**2 <= r_2
+        z_grid, x_grid = np.ogrid[z_min:z_max, x_min:x_max]
+        mask_obs = (x_grid - px)**2 + (z_grid - pz)**2 <= r_2
 
-        map[y_min:y_max, x_min:x_max][mask_obs] = OBSTACLE_VALUE
+        map[z_min:z_max, x_min:x_max][mask_obs] = OBSTACLE_VALUE
 
 def empty_around_waypoints(obstacle_map:Arr, points, r=CAR_NEAR):
     h, w = obstacle_map.shape
     r_2 = r**2
 
     # 내부 비움
-    for px, py in points:
-        px, py = int(px), int(py)
+    for px, pz in points:
+        px, pz = int(px), int(pz)
 
-        y_min = int(round(max(0, min(h, py - r))))
-        y_max = int(round(max(0, min(h, py + r + 1))))
+        z_min = int(round(max(0, min(h, pz - r))))
+        z_max = int(round(max(0, min(h, pz + r + 1))))
         x_min = int(round(max(0, min(w, px - r))))
         x_max = int(round(max(0, min(w, px + r + 1))))
 
-        y_grid, x_grid = np.ogrid[y_min:y_max, x_min:x_max]
-        mask_hollow = (x_grid - px)**2 + (y_grid - py)**2 <= r_2
+        z_grid, x_grid = np.ogrid[z_min:z_max, x_min:x_max]
+        mask_hollow = (x_grid - px)**2 + (z_grid - pz)**2 <= r_2
 
-        obstacle_map[y_min:y_max, x_min:x_max][mask_hollow] = 0
+        obstacle_map[z_min:z_max, x_min:x_max][mask_hollow] = 0
 
 def generate_random_waypoints(
         num,
