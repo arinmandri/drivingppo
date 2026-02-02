@@ -32,10 +32,7 @@ class MyPpoAdaptor:
             model_path:str,
             obstacle_map:Arr|None=None,
             waypoints=[],
-            debugMode=False,
         ):
-
-        self.debugMode = debugMode
 
         self.__poop_x = 0.0  # speed 부호 판별용
         self.__poop_z = 0.0
@@ -96,22 +93,21 @@ class MyPpoAdaptor:
         self.__adjust_speed_of_pooping_tank_challenge()
         world.step(0.0)
 
+        # 도착했으면 그냥 STOP
+        if world.arrived:
+            if DEBUG: print('도착')
+            return True, 0.0, 0.0
+
         # 상태값
         observation = get_state(world)
-        if self.debugMode: print(observation_str(observation), f' / GOAL({world.waypoint_idx}/{len(world.waypoints)}): {world.get_relative_angle_to_wpoint()/pi2*360:.1f}, {world.get_distance_to_wpoint():.1f}')
-
-        # 도착했으면 그냥 STOP
-        a0 = world.get_relative_angle_to_wpoint()
-        d0 = world.get_distance_to_wpoint()
-        if world.arrived:
-            if DEBUG: print('도착', d0)
-            return True, 0.0, 0.0
+        if DEBUG: print(observation_str(observation), f' / GOAL({world.waypoint_idx}/{len(world.waypoints)}): {world.get_relative_angle_to_wpoint()/pi2*360:.1f}, {world.get_distance_to_wpoint():.1f}')
 
         # 액션 산출
         action, _states = self.model.predict(observation, deterministic=True)
-        if self.debugMode: print(action_str(action))
         ws, ad = float(action[0]), float(action[1])
+
         if DEBUG:  # 액션, 관찰 로그
+            print(action_str(action))
             if not hasattr(self, "_csv_header_written"):
                 # 컬럼 한 번만 기록
                 obs_cols = [f"obs_{i}" for i in range(len(observation))]
@@ -126,9 +122,12 @@ class MyPpoAdaptor:
             with open(LOG_FILE_PATH, "a", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerow(row)
-            if DEBUG: print(f'GOAL: {d0:.1f} / {a0*pi2/360:.1f} | ACTION: {ws:.1f}, {ad:.1f}')
 
-        if DEBUG: apply_action(world, action)  # 확인용
+            a0 = world.get_relative_angle_to_wpoint()
+            d0 = world.get_distance_to_wpoint()
+            print(f'GOAL: {d0:.1f} / {a0*pi2/360:.1f} | ACTION: {ws:.1f}, {ad:.1f}')
+
+            apply_action(world, action)  # 확인용
 
         return False, ws, ad
 
