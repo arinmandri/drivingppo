@@ -4,12 +4,13 @@ import time
 from .world import World
 from .environment import WorldEnv
 from .common import (
+    LOOKAHEAD_POINTS,
+    EACH_POINT_INFO_SIZE,
     LIDAR_NUM,
     OBSERVATION_IND_SPD,
-    OBSERVATION_IND_WPOINT_2,
-    OBSERVATION_IND_SCALAR_S,
-    OBSERVATION_IND_SCALAR_E,
-    OBSERVATION_DIM_SCALAR,
+    OBSERVATION_IND_WPOINT_0,
+    OBSERVATION_IND_WPOINT_1,
+    OBSERVATION_IND_WPOINT_E,
     OBSERVATION_IND_LIDAR_DIS_S,
     OBSERVATION_IND_LIDAR_DIS_E,
     OBSERVATION_DIM_LIDAR,
@@ -23,14 +24,8 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import VecEnv, SubprocVecEnv, DummyVecEnv
 import torch
 import torch.nn as nn
-import torch.nn.init as init
-
-
-import torch
-import torch.nn as nn
-import gymnasium as gym
+import torch.nn.functional as F
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-import numpy as np
 
 
 # 훈련 결과 저장
@@ -38,26 +33,57 @@ LOG_DIR = f"./ppo_tensorboard_logs-{time.strftime('%y%m%d-%H%M')}/"
 CHECKPOINT_DIR = './ppo_world_checkpoints/'
 
 
+class CascadedPathEncoder(nn.Module):
+    def __init__(self, num_points, point_dim, hidden_dim):
+        super(CascadedPathEncoder, self).__init__()
+
+        self.num_points = num_points
+        self.point_dim  = point_dim
+        self.hidden_dim = hidden_dim
+
+        self.layers = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(point_dim + hidden_dim, hidden_dim),
+                nn.ReLU()
+            ) for _ in range(num_points)
+        ])
+
+    def forward(self, path_data):
+        chunks = torch.chunk(path_data, self.num_points, dim=1)
+        features = []
+
+        batch_size = path_data.shape[0]
+        curr_hidden = torch.zeros(batch_size, self.hidden_dim, device=path_data.device)  # 첫번째 waypoint와 결합될 빈값.
+
+        for i, layer in enumerate(self.layers):
+            current_wp = chunks[i]
+            combined = torch.cat((curr_hidden, current_wp), dim=1)
+            curr_hidden = layer(combined)
+            features.append(curr_hidden)
+
+        # 모든 단계의 추론결과 연결 [Batch, num_points × hidden_dim]
+        return torch.cat(features, dim=1)
+
 
 class MyFeatureExtractor(BaseFeaturesExtractor):
-
     def __init__(self, observation_space: gym.spaces.Box):
 
-        speed_and_wpoint1_dim = OBSERVATION_IND_WPOINT_2 - OBSERVATION_IND_SPD
-        feature0_dim = 32
+        self.cascade_hidden_dim = 16
+        feature0_dim = LOOKAHEAD_POINTS * self.cascade_hidden_dim
         feature1_dim = 64
         feature2_dim = 128
-        total_feature_dim   = speed_and_wpoint1_dim + feature0_dim + feature1_dim + feature2_dim
+        total_feature_dim = 1 + feature0_dim + feature1_dim + feature2_dim
 
         super(MyFeatureExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
 
-        self.layer0 = nn.Sequential(
-            nn.Linear(OBSERVATION_DIM_SCALAR, 32),
-            nn.ReLU(),
-            nn.Linear(32, feature0_dim),
-            nn.ReLU(),
+        # 경로 순차적 연관
+        self.layer0 = CascadedPathEncoder(
+            num_points=LOOKAHEAD_POINTS,
+            point_dim=EACH_POINT_INFO_SIZE,
+            hidden_dim=self.cascade_hidden_dim
         )
 
+        # 라이다 CNN
         self.layer1 = nn.Sequential(
             nn.Conv1d(in_channels=1, out_channels=4, kernel_size=2, stride=1, padding=1),
             nn.ReLU(),
@@ -68,23 +94,23 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
             nn.Linear(6 * feature1_dim, feature1_dim)
         )
 
+        # 속도 + 첫번째목표 + 라이다
         self.layer2 = nn.Sequential(
-            # 위치 정보 매핑 (Linear)
-            nn.Linear(speed_and_wpoint1_dim + feature1_dim, feature2_dim),
+            nn.Linear(1 + EACH_POINT_INFO_SIZE + feature1_dim, feature2_dim),
             nn.ReLU(),
         )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed           = observations[:, OBSERVATION_IND_SPD         : OBSERVATION_IND_SPD+1]
+        wpoint0         = observations[:, OBSERVATION_IND_WPOINT_0    : OBSERVATION_IND_WPOINT_1]
+        path_data       = observations[:, OBSERVATION_IND_WPOINT_0    : OBSERVATION_IND_WPOINT_E]
+        lidar_dis_data  = observations[:, OBSERVATION_IND_LIDAR_DIS_S : OBSERVATION_IND_LIDAR_DIS_E]
 
-        speed_and_wpoint1 = observations[:, OBSERVATION_IND_SPD         : OBSERVATION_IND_WPOINT_2]
-        scalar_data       = observations[:, OBSERVATION_IND_SCALAR_S    : OBSERVATION_IND_SCALAR_E]
-        lidar_dis_data    = observations[:, OBSERVATION_IND_LIDAR_DIS_S : OBSERVATION_IND_LIDAR_DIS_E]
-
-        output0 = self.layer0(scalar_data)
+        output0 = self.layer0(path_data) 
         output1 = self.layer1(lidar_dis_data.unsqueeze(1))
-        output2 = self.layer2(torch.cat((speed_and_wpoint1, output1), dim=1))
+        output2 = self.layer2(torch.cat((speed, wpoint0, output1), dim=1))
 
-        return torch.cat((speed_and_wpoint1, output0, output1, output2), dim=1)
+        return torch.cat((speed, output0, output1, output2), dim=1)
 
 
 
