@@ -553,8 +553,6 @@ class WorldController(WorldViewer):
         self.trackingMode = config.get('TrackingMode', False)  # T: 서버로 get_action 호출해서 조작. F:키보드조작 가능.
         self.logMode      = config.get('LogMode',      False)  # /info로 정보 보낼지
         self.pause = False     # 일시정지
-        self.color['p']      = 'red' if self.trackingMode else 'black'
-        self.color['lidar0'] = '#00EE00' if self.logMode else ''
 
         # world
         self.world_init:World = self.world
@@ -758,8 +756,8 @@ class WorldController(WorldViewer):
     def key_press_etc(self, key):
         WorldViewer.key_press_etc(self, key)
         if key == 'escape': self.reset_by_server()
-        elif key == 'f2':     self.trackingMode = not self.trackingMode ; self.color['p'] = 'red' if self.trackingMode else 'black'
-        elif key == 'f3':     self.logMode      = not self.logMode      ; self.color['lidar0'] = '#00EE00' if self.logMode else ''
+        elif key == 'f2':     self.trackingMode = not self.trackingMode
+        elif key == 'f3':     self.logMode      = not self.logMode
         elif key == 'f5':     self.pause        = not self.pause
 
     def set_control_status_by_keyboard(self):
