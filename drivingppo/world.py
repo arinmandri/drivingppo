@@ -8,7 +8,7 @@ import math
 import numpy as np
 from numpy import ndarray as arr
 
-from .common import MAP_W as MAP_DEFAULT_W, MAP_H as MAP_DEFAULT_H
+from .common import MAP_W as MAP_DEFAULT_W, MAP_H as MAP_DEFAULT_H, SPD_MAX_STD
 
 idseq = 0
 
@@ -576,7 +576,7 @@ class World:
             self.trace_count += 1
             if self.trace_count >= 3:
                 self.trace_count = 0
-                s = p.speed / (Car.SPEED_MAX_W  if p.speed > 0 else -Car.SPEED_MAX_S)
+                s = min(p.speed / SPD_MAX_STD, 1.0)
                 self.trace.append((p.x, p.z, s))
             if len(self.trace) > self.trace_max: # 기록이 길면 오래된거 버림
                 self.trace = self.trace[-self.trace_max:]
