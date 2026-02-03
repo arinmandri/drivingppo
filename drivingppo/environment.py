@@ -406,6 +406,6 @@ class WorldEnv(gym.Env):
             self.viewer.close()
             self.viewer = None
         else:
-            self.viewer.mainloop()
+            self.viewer.occupy_mainloop()
             self.viewer = None
         print('WorldEnv closed')

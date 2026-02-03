@@ -312,10 +312,12 @@ class WorldViewer:
         if type(self) == WorldViewer:
             self.update()
             if self.auto_update:
-                self.mainloop()
+                self.occupy_mainloop()
 
-    def mainloop(self):
+    def occupy_mainloop(self):
         if self.tk_root:
+            self.auto_update = True
+            self.update()
             self.tk_root.mainloop()
 
     def close(self):
@@ -587,7 +589,7 @@ class WorldController(WorldViewer):
         if type(self) == WorldController:
             self.update()
             if self.auto_update:
-                self.mainloop()
+                self.occupy_mainloop()
 
 
     # 마우스 조작
