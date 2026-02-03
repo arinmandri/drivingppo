@@ -631,13 +631,15 @@ def generate_world_zipper(
 
     obstacle_map = create_empty_map(w, h)
 
-    for i in range(0, num, 2):
+    i0 = randint(0, 1)
+    i1 = 1 - i0
+    for i in range(i0, num, 2):
         wall_x = wall_x0 + interval * i
         obstacle_map[
             0 : h//2 + randint(pout_min, pout_max),
             wall_x - wall_width//2 : wall_x + int((wall_width+1)/2)
         ] = 1
-    for i in range(1, num, 2):
+    for i in range(i1, num, 2):
         wall_x = wall_x0 + interval * i
         obstacle_map[
             h//2- randint(pout_min, pout_max) : h,
