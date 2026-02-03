@@ -15,7 +15,7 @@ from drivingppo.environment import SPD_MAX_STD
 MAP_W = 150
 MAP_H = 150
 
-NEAR = 3.0
+NEAR = 2.5
 
 W_CONFIG = {
     'lidar_raynum': LIDAR_NUM,
@@ -65,7 +65,7 @@ def gen_env_plain():
             return generate_world_square(randint(30, 50), randint(30, 50), padding=5, num=4)
 
 def gen_env_obs():
-    if randint(0, 2):
+    if randint(0, 1):
         choice = randint(0, 5)
         if choice < 1:
             return generate_random_world_obs_matrix(70, 70, num=11, obs_dist=randint(10, 18))
