@@ -79,7 +79,7 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
         speed           = observations[:, OBSERVATION_IND_SPD         : OBSERVATION_IND_SPD+1]
         path_data       = observations[:, OBSERVATION_IND_WPOINT_0    : OBSERVATION_IND_WPOINT_E]
 
-        output0 = self.layer0(path_data) 
+        output0 = self.layer0(path_data)
 
         return torch.cat((speed, output0), dim=1)
 
