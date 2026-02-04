@@ -25,7 +25,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 
 # 훈련 결과 저장
-LOG_DIR = f"./ppo_tensorboard_logs-{time.strftime('%y%m%d-%H%M')}/"
+LOG_DIR = f"./ppo_tensorboard_logs/"
 CHECKPOINT_DIR = './ppo_world_checkpoints/'
 
 
@@ -91,6 +91,7 @@ def train_start(
         save_path:str|None=None,
         save_freq:int=0,
         tb_log:bool=False,
+        run_name:str='DPPO',
         *,
         vec_env:Literal['dummy', 'subp']|VecEnv='dummy',
         lr=3e-4,
@@ -154,6 +155,7 @@ def train_start(
     model.learn(
         total_timesteps=steps,
         callback=checkpoint_callback,
+        tb_log_name=run_name,
         progress_bar=True,
     )
 
@@ -174,6 +176,7 @@ def train_resume(
         save_path:str|None=None,
         save_freq:int=0,
         tb_log:bool=False,
+        run_name:str='DPPO',
         *,
         vec_env:Literal['dummy', 'subp']|VecEnv='dummy',
         log_std=None,
@@ -227,6 +230,7 @@ def train_resume(
     model.learn(
         total_timesteps=steps,
         callback=checkpoint_callback,
+        tb_log_name=run_name,
         progress_bar=True,
 
         reset_num_timesteps=False # 내부 타임스텝 카운터 초기화 여부
