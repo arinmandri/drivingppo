@@ -40,7 +40,9 @@ class CascadedPathEncoder(nn.Module):
         self.layers = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(point_dim + hidden_dim, hidden_dim),
-                nn.ReLU()
+                nn.ReLU(),
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.ReLU(),
             ) for _ in range(num_points)
         ])
 
