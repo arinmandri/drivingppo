@@ -109,8 +109,8 @@ def _distance_score_near(x:float) -> float:
 def distance_score_near(x:float) -> float:
     return _distance_score_near(x)
 
-def distance_score_far(x:float) -> float:
-    return x / 30.0
+def distance_score_far(distance:float) -> float:
+    return math.log(distance + 1.0)/5.0
 
 
 def apply_action(world:World, action:Arr):
@@ -248,7 +248,7 @@ class WorldEnv(gym.Env):
 
         # 목표점 도달
         elif result_wpoint:
-            reward_step[1] += (18.0 * cos_pv) + (12.0 * cos_nx) + (7.5 * s_norm)
+            reward_step[1] += (18.0 * cos_pv) + (6.0 * cos_nx) + (10.0 * s_norm)
             if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f}) | next_a {int(round(ang_nx*rad_to_deg))}({cos_nx:.2f})')
 
             # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
