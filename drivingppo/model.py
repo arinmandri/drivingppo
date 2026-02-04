@@ -6,14 +6,10 @@ from .environment import WorldEnv
 from .common import (
     LOOKAHEAD_POINTS,
     EACH_POINT_INFO_SIZE,
-    LIDAR_NUM,
     OBSERVATION_IND_SPD,
     OBSERVATION_IND_WPOINT_0,
     OBSERVATION_IND_WPOINT_1,
     OBSERVATION_IND_WPOINT_E,
-    OBSERVATION_IND_LIDAR_DIS_S,
-    OBSERVATION_IND_LIDAR_DIS_E,
-    OBSERVATION_DIM_LIDAR,
 )
 
 import gymnasium as gym
@@ -70,9 +66,7 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
 
         self.cascade_hidden_dim = 16
         feature0_dim = LOOKAHEAD_POINTS * self.cascade_hidden_dim
-        feature1_dim = 64
-        feature2_dim = 128
-        total_feature_dim = 1 + feature0_dim + feature1_dim + feature2_dim
+        total_feature_dim = 1 + feature0_dim
 
         super(MyFeatureExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
 
@@ -83,34 +77,13 @@ class MyFeatureExtractor(BaseFeaturesExtractor):
             hidden_dim=self.cascade_hidden_dim
         )
 
-        # 라이다 CNN
-        self.layer1 = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=4, kernel_size=2, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(in_channels=4, out_channels=6, kernel_size=6, stride=2, padding=0),
-            nn.ReLU(),
-            nn.AdaptiveMaxPool1d(output_size=feature1_dim),
-            nn.Flatten(),
-            nn.Linear(6 * feature1_dim, feature1_dim)
-        )
-
-        # 속도 + 첫번째목표 + 라이다
-        self.layer2 = nn.Sequential(
-            nn.Linear(1 + EACH_POINT_INFO_SIZE + feature1_dim, feature2_dim),
-            nn.ReLU(),
-        )
-
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         speed           = observations[:, OBSERVATION_IND_SPD         : OBSERVATION_IND_SPD+1]
-        wpoint0         = observations[:, OBSERVATION_IND_WPOINT_0    : OBSERVATION_IND_WPOINT_1]
         path_data       = observations[:, OBSERVATION_IND_WPOINT_0    : OBSERVATION_IND_WPOINT_E]
-        lidar_dis_data  = observations[:, OBSERVATION_IND_LIDAR_DIS_S : OBSERVATION_IND_LIDAR_DIS_E]
 
         output0 = self.layer0(path_data) 
-        output1 = self.layer1(lidar_dis_data.unsqueeze(1))
-        output2 = self.layer2(torch.cat((speed, wpoint0, output1), dim=1))
 
-        return torch.cat((speed, output0, output1, output2), dim=1)
+        return torch.cat((speed, output0), dim=1)
 
 
 

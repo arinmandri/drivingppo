@@ -9,7 +9,6 @@ from numpy import ndarray as Arr
 from random import randint
 
 from drivingppo.world import World, Car, OBSTACLE_VALUE, create_empty_map, angle_of, distance_of, pi, pi2, rad_to_deg
-from drivingppo.common import LIDAR_NUM, LIDAR_RANGE, LIDAR_START, LIDAR_END
 from drivingppo.environment import SPD_MAX_STD
 
 MAP_W = 150
@@ -18,12 +17,8 @@ MAP_H = 150
 NEAR = 2.5
 
 W_CONFIG = {
-    'lidar_raynum': LIDAR_NUM,
-    'lidar_range':  LIDAR_RANGE,
-    'angle_start':  LIDAR_START,
-    'angle_end':    LIDAR_END,
     'near': NEAR,
-    'far': 35.0,
+    'far': 999.9,
 }
 CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.  # 에이전트 대각선길이의 반  (1.5, 3)-->1.68
 

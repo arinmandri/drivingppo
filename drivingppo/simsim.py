@@ -430,20 +430,6 @@ class WorldViewer:
             for i in range(0, world.MAP_H + 1, 10):
                 self.fcanvas.add_line(0, i, world.MAP_W, i, fill=c['grid2'])
 
-        # 라이다
-        for _, _, d, lx, _, lz, hit in world.lidar_points:
-            temp = max(0.0, min(1.0, d / world.lidar.r))
-            if hit: self.fcanvas.add_line(px, pz, lx, lz,
-                                   fill=f'#{255:02X}{int(255*temp):02X}{int(255*temp):02X}',
-                                   width=1)
-            self.fcanvas.add_circle(lx, lz, 1.5 if hit else 1,
-                            fill=c['lidar1'] if hit else c['lidar0'],
-                            outline='')  # 감지점
-        self.fcanvas.add_line(px, pz, world.lidar_points[0][3], world.lidar_points[0][5],
-                       fill='blue', width=1)
-        self.fcanvas.add_line(px, pz, world.lidar_points[-1][3], world.lidar_points[-1][5],
-                       fill='purple', width=1)
-
         # 목표점
         waypoints = world.waypoints
         for i in range(1, len(waypoints)): # 선
@@ -524,9 +510,7 @@ class WorldViewer:
                              bg="black", fg="white", font=("Consolas", 10))
             self.canvas.create_window(self.CANVAS_W/2, 0, anchor="n", window=timeLabel)
  
-            # max_risk = max([min(1/(d+1e-6)*100, 100) for _, _, d, _,_,_,_ in world.lidar_points]) # 현재 스텝의 최대 위험도
-            # print(f'max_risk: {max_risk:.2f}')
-            text = f'목표({world.waypoint_idx}/{len(world.waypoints)}): {int(world.get_relative_angle_to_wpoint()*rad_to_deg)}° / {world.get_distance_to_wpoint():.1f}m  | 근접장애물 {int(world.obs_nearest_angle*rad_to_deg)}° / {world.obs_nearest_distance:.1f}m'
+            text = f'목표({world.waypoint_idx}/{len(world.waypoints)}): {int(world.get_relative_angle_to_wpoint()*rad_to_deg)}° / {world.get_distance_to_wpoint():.1f}m'
             self.canvas.create_text(self.CANVAS_W/2, self.CANVAS_H, anchor="s",
                                     text=text, fill="black", font=("Consolas", 10))
 

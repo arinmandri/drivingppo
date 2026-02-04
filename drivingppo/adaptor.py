@@ -3,7 +3,7 @@ import csv
 from collections.abc import Iterable
 
 from .world import World, Car, angle_of, create_empty_map, pi, pi2, rad_to_deg
-from .common import LIDAR_NUM, LIDAR_RANGE, LIDAR_START, LIDAR_END, MAP_W, MAP_H
+from .common import MAP_W, MAP_H
 from .environment import get_state, observation_str, apply_action, action_str
 
 import numpy as np
@@ -191,10 +191,6 @@ def create_initial_world(
         obstacle_map=obstacle_map,
         waypoints=waypoints,
         config={
-            'lidar_raynum': LIDAR_NUM,
-            'lidar_range': LIDAR_RANGE,
-            'angle_start': LIDAR_START,
-            'angle_end': LIDAR_END,
             'near': 6.0,
             'far': 30.0,  # smooth_los_distance(경로 단순화시 노드 사이 거리 최대값) 값보다 커야 함.
         }

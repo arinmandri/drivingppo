@@ -9,17 +9,11 @@ from .world import World, distance_of, angle_of, pi, pi2, rad_to_deg
 from .simsim import WorldViewer
 from .common import (
     SPD_MAX_STD,
-    LIDAR_START,
-    LIDAR_END,
-    LIDAR_NUM,
-    LIDAR_RANGE,
     LOOKAHEAD_POINTS,
     OBSERVATION_IND_SPD,
     OBSERVATION_IND_WPOINT_0,
     OBSERVATION_IND_WPOINT_1,
     OBSERVATION_IND_WPOINT_2,
-    OBSERVATION_IND_LIDAR_DIS_S,
-    OBSERVATION_IND_LIDAR_DIS_E,
     OBSERVATION_DIM,
 )
 
@@ -41,12 +35,8 @@ def get_state(world:World):
     # 경로 정보
     path_data = get_path_features(world)
 
-    # 라이다 거리가까운점수
-    obs_near = [distance_score_near(distance) if h else 0.0
-                for _,_, distance, _,_,_, h in world.lidar_points]
-
     # 모든 벡터를 합쳐 고정된 크기의 배열로 만든다.
-    observation = np.array([s_norm] + path_data + obs_near, dtype=np.float32)
+    observation = np.array([s_norm] + path_data, dtype=np.float32)
 
     return observation
 
@@ -116,10 +106,8 @@ def _distance_score_near(x:float) -> float:
     else:
         return 1.0
 
-distance_score_near_base = _distance_score_near(LIDAR_RANGE)
-
 def distance_score_near(x:float) -> float:
-    return max(0, _distance_score_near(x) - distance_score_near_base)
+    return _distance_score_near(x)
 
 def distance_score_far(x:float) -> float:
     return x / 30.0
@@ -167,8 +155,6 @@ class WorldEnv(gym.Env):
 
         super().__init__()
         self.closed = False
-
-        self.lidar_angles = np.linspace(LIDAR_START, LIDAR_END, LIDAR_NUM)
 
         self.time_step = time_step
         self.step_per_control = step_per_control  # 조작값 변경은 월드의 n스텝마다 한 번. Tank Challenge에서도 FPS는 30이어도 API 요청은 최소 0.1초마다 한 번으로 설정 가능하다.
@@ -252,10 +238,6 @@ class WorldEnv(gym.Env):
         ang_nx  = w.get_relative_angle_to_wpoint()
         cos_nx  = math.cos(ang_nx)
 
-        obs0 = observation0[OBSERVATION_IND_LIDAR_DIS_S:OBSERVATION_IND_LIDAR_DIS_E].max()
-        obs1 = observation1[OBSERVATION_IND_LIDAR_DIS_S:OBSERVATION_IND_LIDAR_DIS_E].max()
-        obs_d = obs1 - obs0
-
         reward_step = [0.0 for _ in range(7)]
 
         # 충돌
@@ -313,8 +295,8 @@ class WorldEnv(gym.Env):
             stat_progress     = + (cos_nx * s_norm) * 0.3  if s_norm > 0 \
                            else - s_norm * s_norm * 1.5  # 후진 진행 억제
             stat_orientation  = + cos_nx * 0.06
-            danger            = - obs1 * 0.06
-            danger_d          = - obs_d * 8.0
+            danger            = 0.0
+            danger_d          = 0.0
             total = reward_time+stat_progress+stat_orientation+danger+danger_d
             if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ang {stat_orientation:+5.2f} | danger {danger:+5.2f} ~  {danger_d:+5.2f} --> {total:+6.2f}')
 
