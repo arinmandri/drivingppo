@@ -10,6 +10,7 @@ from .common import (
     OBSERVATION_IND_WPOINT_0,
     OBSERVATION_IND_WPOINT_1,
     OBSERVATION_IND_WPOINT_E,
+    OBSERVATION_DIM,
 )
 
 import gymnasium as gym
@@ -27,6 +28,107 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 # 훈련 결과 저장
 LOG_DIR = f"./ppo_tensorboard_logs/"
 CHECKPOINT_DIR = './ppo_world_checkpoints/'
+
+
+class NoFeatureExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Box):
+
+        super(NoFeatureExtractor, self).__init__(observation_space, features_dim=OBSERVATION_DIM)
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        return observations
+
+
+
+class MLPFeatureExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Box):
+
+        hidden_dim = 16
+        flatten_output_dim = LOOKAHEAD_POINTS * hidden_dim
+
+        total_feature_dim = 1 + flatten_output_dim
+
+        super(MLPFeatureExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+
+        input_dim = LOOKAHEAD_POINTS * EACH_POINT_INFO_SIZE
+
+        self.layer0 = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(input_dim, flatten_output_dim),
+            nn.ReLU(),
+            nn.Linear(flatten_output_dim, flatten_output_dim),
+            nn.ReLU()
+        )
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed     = observations[:, OBSERVATION_IND_SPD : OBSERVATION_IND_SPD+1]
+        path_data = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        output0 = self.layer0(path_data)
+
+        return torch.cat((speed, output0), dim=1)
+
+
+class RNNFeatureExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Box):
+
+        hidden_dim = 16
+        flatten_output_dim = LOOKAHEAD_POINTS * hidden_dim
+        total_feature_dim = 1 + flatten_output_dim
+
+        super(RNNFeatureExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+
+        self.layer0 = nn.RNN(
+            input_size=EACH_POINT_INFO_SIZE,
+            hidden_size=hidden_dim,
+            num_layers=1,
+            batch_first=True,
+            nonlinearity='relu'
+        )
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed     = observations[:, OBSERVATION_IND_SPD : OBSERVATION_IND_SPD+1]
+        path_data = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        reshaped_path = path_data.reshape(-1, LOOKAHEAD_POINTS, EACH_POINT_INFO_SIZE)  # [Batch, 길이×채널] -> [Batch, 길이(시간), 채널]
+        output, _ = self.layer0(reshaped_path)
+
+        output0 = torch.flatten(output, start_dim=1)
+
+        return torch.cat((speed, output0), dim=1)
+
+
+class CNNFeatureExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Box):
+
+        hidden_dim = 16
+        flatten_output_dim = LOOKAHEAD_POINTS * hidden_dim
+        total_feature_dim = 1 + flatten_output_dim
+
+        super(CNNFeatureExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+
+        self.cnn = nn.Sequential(
+            nn.Conv1d(
+                in_channels=EACH_POINT_INFO_SIZE,
+                out_channels=hidden_dim,
+                kernel_size=2,
+                stride=1,
+                padding=1
+            ),
+            nn.ReLU()
+        )
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed     = observations[:, OBSERVATION_IND_SPD : OBSERVATION_IND_SPD+1]
+        path_data = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        reshaped = path_data.reshape(-1, LOOKAHEAD_POINTS, EACH_POINT_INFO_SIZE).permute(0, 2, 1)  # [Batch, 길이×채널] -> [Batch, 채널, 길이]
+
+        feature = self.cnn(reshaped)[:, :, :LOOKAHEAD_POINTS]
+
+        output0 = torch.flatten(feature, start_dim=1)
+
+        return torch.cat((speed, output0), dim=1)
 
 
 class CascadedPathEncoder(nn.Module):
@@ -61,18 +163,19 @@ class CascadedPathEncoder(nn.Module):
         return torch.cat(features, dim=1)
 
 
-class MyFeatureExtractor(BaseFeaturesExtractor):
+class CascadedPathExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
-        cascade_hidden_dim = 16
+        hidden_dim = 16
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * hidden_dim
 
-        super(MyFeatureExtractor, self).__init__(observation_space, features_dim=1 + LOOKAHEAD_POINTS * cascade_hidden_dim)
+        super(CascadedPathExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
 
         # 경로 순차적 연관
         self.layer0 = CascadedPathEncoder(
             num_points=LOOKAHEAD_POINTS,
             point_dim=EACH_POINT_INFO_SIZE,
-            hidden_dim=cascade_hidden_dim
+            hidden_dim=hidden_dim
         )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
@@ -114,7 +217,7 @@ def train_start(
     vec_env = make_vec_env(gen_env, n_envs=1, vec_env_cls=vec_env_cls, seed=seed)# n_envs: 병렬 환경 수
 
     policy_kwargs = dict(
-        features_extractor_class=MyFeatureExtractor,
+        features_extractor_class=CascadedPathExtractor,
         features_extractor_kwargs=dict(),
         net_arch=dict(
             pi=[256, 256], # Actor
