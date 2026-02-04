@@ -64,17 +64,15 @@ class CascadedPathEncoder(nn.Module):
 class MyFeatureExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
-        self.cascade_hidden_dim = 16
-        feature0_dim = LOOKAHEAD_POINTS * self.cascade_hidden_dim
-        total_feature_dim = 1 + feature0_dim
+        cascade_hidden_dim = 16
 
-        super(MyFeatureExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+        super(MyFeatureExtractor, self).__init__(observation_space, features_dim=1 + LOOKAHEAD_POINTS * cascade_hidden_dim)
 
         # 경로 순차적 연관
         self.layer0 = CascadedPathEncoder(
             num_points=LOOKAHEAD_POINTS,
             point_dim=EACH_POINT_INFO_SIZE,
-            hidden_dim=self.cascade_hidden_dim
+            hidden_dim=cascade_hidden_dim
         )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
