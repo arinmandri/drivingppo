@@ -121,8 +121,8 @@ distance_score_near_base = _distance_score_near(LIDAR_RANGE)
 def distance_score_near(x:float) -> float:
     return max(0, _distance_score_near(x) - distance_score_near_base)
 
-def distance_score_far(distance:float) -> float:
-    return math.log(distance + 1.0)/10.0
+def distance_score_far(x:float) -> float:
+    return x / 30.0
 
 
 def apply_action(world:World, action:Arr):
