@@ -41,7 +41,7 @@ def get_state(world:World):
     return observation
 
 def speed_norm(speed):
-    return min(speed / SPD_MAX_STD, 1.0)  # 가능한 최대 속력은 19쯤이지만 실제로 7이 넘어가는 경우가 거의 없어서 최대 속력 10으로 치고 정규화.
+    return speed / SPD_MAX_STD  # 가능한 최대 속력은 19쯤이지만 실제로 7이 넘어가는 경우가 거의 없어서 최대 속력 10으로 치고 정규화.
 
 def get_path_features(world:World) -> list[float]:
     """
