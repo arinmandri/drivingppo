@@ -109,8 +109,8 @@ def _distance_score_near(x:float) -> float:
 def distance_score_near(x:float) -> float:
     return _distance_score_near(x)
 
-def distance_score_far(distance:float) -> float:
-    return math.log(distance + 1.0)/5.0
+def distance_score_far(x:float) -> float:
+    return x / 30.0
 
 
 def apply_action(world:World, action:Arr):
