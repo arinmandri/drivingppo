@@ -142,8 +142,8 @@ class WorldEnv(gym.Env):
     World에서 주행법을 강화학습하기 위한 gym 환경 클래스.
     """
 
-    time_gain_per_waypoint = 10_000
-    time_gain_limit = 20_000
+    time_gain_per_waypoint = 40_000
+    time_gain_limit = 80_000
 
     def __init__(self,
                  world_generator:Callable[[], World],
