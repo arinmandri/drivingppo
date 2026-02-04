@@ -248,7 +248,7 @@ class WorldEnv(gym.Env):
 
         # 목표점 도달
         elif result_wpoint:
-            reward_step[1] += (18.0 * cos_pv) + (6.0 * cos_nx) + (3.0 * s_norm)
+            reward_step[1] += (20.0 * cos_pv) + (1.0 * cos_nx) + (1.0 * s_norm)
             if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f}) | next_a {int(round(ang_nx*rad_to_deg))}({cos_nx:.2f})')
 
             # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
@@ -290,7 +290,7 @@ class WorldEnv(gym.Env):
         else:
             # 진행 보상
 
-            reward_time = -0.1
+            reward_time = -0.3
 
             stat_progress     = + (cos_nx * s_norm) * 0.3  if s_norm > 0 \
                            else - s_norm * s_norm * 1.5  # 후진 진행 억제
@@ -377,7 +377,8 @@ class WorldEnv(gym.Env):
             with open(LOG_FILE_PATH, "a", encoding="utf-8") as f:
                 f.write(formatted_message + "\n")
         except Exception as e:
-            print(f"!!! 로그 저장 실패: {e}")
+            # print(f"!!! 로그 저장 실패: {e}")
+            pass
 
 
     def close(self):
