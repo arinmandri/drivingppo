@@ -42,7 +42,7 @@ CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 �
 
 def gen_0():  return generate_random_world_plain(map_h=100 , map_w=100 , num=1, wpoint_dist_min=10,  wpoint_dist_max=10,  ang_init='half', ang_lim=0, spd_init=0)
 
-def gen_11(): return generate_random_world_plain(map_h=150, map_w=150, num=10, wpoint_dist_min=6,  wpoint_dist_max=9, ang_init='p',     ang_lim=pi*0.5, spd_init=0)
+def gen_11(): return generate_random_world_plain(map_h=150, map_w=150, num=10, wpoint_dist_min=8,  wpoint_dist_max=12, ang_init='p',     ang_lim=pi*0.7, spd_init=0)
 def gen_12(): return generate_random_world_plain(map_h=200, map_w=200, num=4,  wpoint_dist_min=16, wpoint_dist_max=23, ang_init='half', ang_lim=pi*0.2, spd_init='rand')
 def gen_env_naive():
     choice = randint(0, 4)
@@ -53,8 +53,8 @@ def gen_env_naive():
     else:
         return gen_0()
 
-def gen_21(): return generate_random_world_plain(map_h=150, map_w=150, num=8, wpoint_dist_min=6,  wpoint_dist_max=20, ang_init='rand', ang_lim=pi*0.9, spd_init=0.0)
-def gen_22(): return generate_random_world_plain(map_h=150, map_w=150, num=16, wpoint_dist_min=6,  wpoint_dist_max=8, ang_init='rand', ang_lim=pi*0.4, spd_init=0.0)
+def gen_21(): return generate_random_world_plain(map_h=150, map_w=150, num=18, wpoint_dist_min=6,  wpoint_dist_max=20, ang_init='rand', ang_lim=pi*1.2, spd_init='rand')
+def gen_22(): return generate_random_world_plain(map_h=150, map_w=150, num=16, wpoint_dist_min=7,  wpoint_dist_max=11, ang_init='rand', ang_lim=pi*0.9, spd_init='rand')
 def gen_env_plain():
     if randint(0, 1):
         choice = randint(0, 1)
