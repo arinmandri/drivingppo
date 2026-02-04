@@ -50,13 +50,16 @@ def gen_env_naive():
 
 def gen_21(): return generate_random_world_plain(map_h=150, map_w=150, num=18, wpoint_dist_min=6,  wpoint_dist_max=20, ang_init='rand', ang_lim=pi*1.2, spd_init='rand')
 def gen_22(): return generate_random_world_plain(map_h=150, map_w=150, num=16, wpoint_dist_min=7,  wpoint_dist_max=11, ang_init='rand', ang_lim=pi*0.9, spd_init='rand')
+def gen_23(): return generate_random_world_plain(map_h=300, map_w=300, num=17, wpoint_dist_min=25,  wpoint_dist_max=35, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
 def gen_env_plain():
-    if randint(0, 1):
+    if randint(0, 2):
         choice = randint(0, 1)
         if choice < 1:
             return gen_21()
-        else:
+        if choice < 1:
             return gen_22()
+        else:
+            return gen_23()
     else:
         return gen_env_naive()
 
