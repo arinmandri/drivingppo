@@ -35,53 +35,10 @@ CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 �
 """
 
 
-def gen_0():  return generate_random_world_plain(map_h=100 , map_w=100 , num=1, wpoint_dist_min=10,  wpoint_dist_max=10,  ang_init='half', ang_lim=0, spd_init=0)
-
-def gen_11(): return generate_random_world_plain(map_h=150, map_w=150, num=10, wpoint_dist_min=8,  wpoint_dist_max=12, ang_init='p',     ang_lim=pi*0.7, spd_init=0)
-def gen_12(): return generate_random_world_plain(map_h=200, map_w=200, num=4,  wpoint_dist_min=16, wpoint_dist_max=23, ang_init='half', ang_lim=pi*0.2, spd_init='rand')
-def gen_env_naive():
-    choice = randint(0, 4)
-    if choice < 2:
-        return gen_11()
-    if choice < 4:
-        return gen_12()
-    else:
-        return gen_0()
-
-def gen_21(): return generate_random_world_plain(map_h=150, map_w=150, num=18, wpoint_dist_min=6,  wpoint_dist_max=20, ang_init='rand', ang_lim=pi*1.2, spd_init='rand')
-def gen_22(): return generate_random_world_plain(map_h=150, map_w=150, num=16, wpoint_dist_min=7,  wpoint_dist_max=11, ang_init='rand', ang_lim=pi*0.9, spd_init='rand')
-def gen_23(): return generate_random_world_plain(map_h=300, map_w=300, num=17, wpoint_dist_min=15,  wpoint_dist_max=30, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
-def gen_env_plain():
-    if randint(0, 2):
-        choice = randint(0, 1)
-        if choice < 1:
-            return gen_21()
-        if choice < 1:
-            return gen_22()
-        else:
-            return gen_23()
-    else:
-        return gen_env_naive()
-
-def gen_env_obs():
-    if randint(0, 1):
-        choice = randint(0, 5)
-        if choice < 1:
-            return generate_random_world_obs_matrix(70, 70, num=11, obs_dist=randint(10, 18))
-        if choice < 2:
-            return generate_random_world_narrow(150, 150, num=9, hollow_radius=randint(4, 9))
-        if choice < 3:
-            return generate_random_world_obs_between(100, 100, num=6)
-        if choice < 4:
-            return generate_world_square(randint(30, 50), randint(30, 50), num=4)
-        if choice < 5:
-            return generate_world_zipper()
-        else:
-            return gen_env_naive()
-    else:
-        return gen_env_plain()
-
-def gen_inv(): return generate_random_world_plain(map_h=150, map_w=150, num=5,  wpoint_dist_min=9,  wpoint_dist_max=10, ang_init='inv',  ang_lim=0.0,     spd_init=0)
+def gen_0(): return generate_random_world_plain(map_h=100 , map_w=100 , num=1, wpoint_dist_min=10,  wpoint_dist_max=10,  ang_init='half', ang_lim=0, spd_init=0)
+def gen_1(): return generate_random_world_plain(map_h=300, map_w=300, num=7, wpoint_dist_min=15,  wpoint_dist_max=30, ang_init='p',    ang_lim=pi*1.0, spd_init=0)
+def gen_2(): return generate_random_world_plain(map_h=300, map_w=300, num=7, wpoint_dist_min=15,  wpoint_dist_max=30, ang_init='half', ang_lim=pi*1.0, spd_init='rand')
+def gen_3(): return generate_random_world_plain(map_h=300, map_w=300, num=7, wpoint_dist_min=15,  wpoint_dist_max=30, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
 
 
 def generate_random_world_plain(
