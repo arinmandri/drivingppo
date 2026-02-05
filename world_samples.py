@@ -143,7 +143,8 @@ def generate_random_waypoints(
         waypoints.append((x, z))
 
         # 랜덤 각도: 이전 각도에서 일정 이내로만 변화를 제한
-        angle_d = np.clip(np.random.normal(0, angle_change_limit/pi, 1), -angle_change_limit, angle_change_limit)
+        angle_d = random.random() * 2 * angle_change_limit - angle_change_limit
+        # angle_d = np.clip(np.random.normal(0, angle_change_limit/pi, 1), -angle_change_limit, angle_change_limit)
         angle = angle_of(last_x, last_z, x, z) + angle_d
         angle = angle % pi2
 
