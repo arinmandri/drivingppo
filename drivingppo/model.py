@@ -276,7 +276,7 @@ def train_start(
     vec_env = make_vec_env(gen_env, n_envs=1, vec_env_cls=vec_env_cls, seed=seed)# n_envs: 병렬 환경 수
 
     policy_kwargs = dict(
-        features_extractor_class=CascadedPathExtractor,  #####################################################
+        features_extractor_class=PyramidCNNFeatureExtractor,  #####################################################
         features_extractor_kwargs=dict(),
         net_arch=dict(
             pi=[256, 256], # Actor
