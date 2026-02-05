@@ -102,8 +102,8 @@ class Car:
     차 한 대.
     속성: 크기, 위치, 방향, 속도 등.
     """
-    SPEED_MAX_W:float = 19.44
-    SPEED_MAX_S:float = -8.34
+    SPEED_MAX_W:float = 10.0
+    SPEED_MAX_S:float = -5.0
     w = 1.5
     h = 3
 

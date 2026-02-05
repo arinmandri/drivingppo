@@ -240,15 +240,9 @@ class WorldEnv(gym.Env):
 
         reward_step = [0.0 for _ in range(7)]
 
-        # 충돌
-        if result_collision:
-            reward_step[2] += -200.0
-            ending = '충돌'
-            terminated = True
-
         # 목표점 도달
-        elif result_wpoint:
-            reward_step[1] += 20.0 * cos_pv
+        if result_wpoint:
+            reward_step[1] += 30.0 * cos_pv
             if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f})')
 
             # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
@@ -269,7 +263,7 @@ class WorldEnv(gym.Env):
 
         # 시간 내에 도착 못 함
         elif w.t_acc >= self.time_limit:
-            reward_step[2] += -200.0  # 목적지가 코앞인데 벽앞에서 가만히있기를 택하지 않도록 충돌만큼의 벌점. 대신 시간은 넉넉히 줌.
+            reward_step[2] += -200.0
             ending = '시간초과'
             truncated = True
 
@@ -282,7 +276,6 @@ class WorldEnv(gym.Env):
             icon = \
                 '✅' if ending == '도착' else \
                 '▶️' if ending == '시간한계' else \
-                '💥' if ending == '충돌' else \
                 '👻' if ending == '길잃음' else \
                 '⏰' if ending == '시간초과' else '??'
             self.print_log(f'결과{icon} 도착: {w.waypoint_idx:3d}/{w.path_len:3d} | 시간: {int(w.t_acc/1000):3d}/{int(self.time_limit/1000):3d}/{int(self.max_time/1000):3d} 초 ({int(w.t_acc/self.max_time*100):3d}%) | 위치: {int(p.x):4d}, {int(p.z):4d} ({int(p.x/self.world.MAP_W*100):3d}%, {int(p.z/self.world.MAP_H*100):3d}%)')
@@ -290,11 +283,11 @@ class WorldEnv(gym.Env):
         else:
             # 진행 보상
 
-            reward_time = -0.3
+            reward_time = -0.5
 
             stat_progress     = + (cos_nx * s_norm) * 0.3  if s_norm > 0 \
                            else - s_norm * s_norm * 1.5  # 후진 진행 억제
-            stat_orientation  = + cos_nx * 0.06
+            stat_orientation  = + cos_nx * 0.03
             total = reward_time + stat_progress + stat_orientation
             if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ang {stat_orientation:+5.2f} --> {total:+6.2f}')
 
@@ -327,10 +320,6 @@ class WorldEnv(gym.Env):
         self.reward_totals = [0.0 for _ in range(7)]
         self.time_limit = self.time_gain_limit  # 제한시간. 목표점 도달시마다 추가 획득.
 
-        w = self.world
-        p = w.player
-        self.S_MAX = p.speed_max_w(1)  # 최대속도
-
         observation = self.observation
         info = {}
         return observation, info
@@ -357,7 +346,7 @@ class WorldEnv(gym.Env):
         self.viewer.update()
 
     def print_result(self):
-        self.print_log(f'총점 {int(self.reward_totals[0]):5d} | wpoint {self.reward_totals[1]:6.1f} | time {self.reward_totals[2]:+7.2f} | prog {self.reward_totals[3]:+7.2f} | ang {self.reward_totals[4]:+7.2f} | danger {self.reward_totals[5]:+7.2f} ~ {self.reward_totals[6]:+7.2f}')
+        self.print_log(f'총점 {int(self.reward_totals[0]):5d} | wpoint {self.reward_totals[1]:6.1f} | time {self.reward_totals[2]:+7.2f} | prog {self.reward_totals[3]:+7.2f} | ang {self.reward_totals[4]:+7.2f}')
 
     def print_log(
             self,
@@ -369,12 +358,12 @@ class WorldEnv(gym.Env):
         if self.render_mode == 'debug':
             print(formatted_message, flush=True)
 
-        try:
-            with open(LOG_FILE_PATH, "a", encoding="utf-8") as f:
-                f.write(formatted_message + "\n")
-        except Exception as e:
-            # print(f"!!! 로그 저장 실패: {e}")
-            pass
+        # try:
+        #     with open(LOG_FILE_PATH, "a", encoding="utf-8") as f:
+        #         f.write(formatted_message + "\n")
+        # except Exception as e:
+        #     # print(f"!!! 로그 저장 실패: {e}")
+        #     pass
 
 
     def close(self):
