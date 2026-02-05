@@ -130,6 +130,46 @@ class CNNFeatureExtractor(BaseFeaturesExtractor):
 
         return torch.cat((speed, output0), dim=1)
 
+class PyramidCNNFeatureExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Box):
+
+        self.hidden_dim = 16
+        num_layers = LOOKAHEAD_POINTS - 1
+        total_feature_dim = 1 + EACH_POINT_INFO_SIZE + (num_layers * self.hidden_dim)
+
+        super(PyramidCNNFeatureExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+
+        self.layers = nn.ModuleList()
+
+        for i in range(num_layers):
+            if i == 0:
+                # 첫 번째 층만 입력 채널이 원본 데이터 크기
+                in_channels = EACH_POINT_INFO_SIZE
+            else:
+                in_channels = self.hidden_dim
+
+            layer = nn.Sequential(
+                nn.Conv1d(in_channels, self.hidden_dim, kernel_size=2, stride=1, padding=0),  # 모든 층은 커널=2, 패딩=0으로; 길이가 1씩 줄어든다.
+                nn.ReLU()
+            )
+            self.layers.append(layer)
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed     = observations[:, OBSERVATION_IND_SPD : OBSERVATION_IND_SPD+1]
+        path_data = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        x = path_data.reshape(-1, LOOKAHEAD_POINTS, EACH_POINT_INFO_SIZE).permute(0, 2, 1)
+        features = [speed]
+        features.append(x[:, :, 0])  # 첫 번째 목표점  # x[:, :, 0] -> [Batch, Channel]
+
+        # 각 층을 통과하며 첫 번째 요소 저장
+        curr_x = x
+        for layer in self.layers:
+            curr_x = layer(curr_x)
+            features.append(curr_x[:, :, 0])
+
+        return torch.cat(features, dim=1)
+
 
 class CascadedPathEncoder(nn.Module):
     def __init__(self, num_points, point_dim, hidden_dim):
@@ -236,7 +276,7 @@ def train_start(
     vec_env = make_vec_env(gen_env, n_envs=1, vec_env_cls=vec_env_cls, seed=seed)# n_envs: 병렬 환경 수
 
     policy_kwargs = dict(
-        features_extractor_class=CascadedPathExtractor,
+        features_extractor_class=CascadedPathExtractor,  #####################################################
         features_extractor_kwargs=dict(),
         net_arch=dict(
             pi=[256, 256], # Actor
