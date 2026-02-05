@@ -17,7 +17,7 @@ import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback
 from stable_baselines3.common.vec_env import VecEnv, SubprocVecEnv, DummyVecEnv
 import torch
 import torch.nn as nn
@@ -187,6 +187,25 @@ class CascadedPathExtractor(BaseFeaturesExtractor):
         return torch.cat((speed, output0), dim=1)
 
 
+class TensorboardCallback(BaseCallback):
+    """
+    환경(Env)에서 info['episode_metrics']로 전달한 커스텀 값을
+    텐서보드에 기록(Log)하는 콜백
+    """
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+
+    def _on_step(self) -> bool:
+        # 벡터 환경(VecEnv)을 고려하여 모든 환경의 info를 확인
+        for i, done in enumerate(self.locals['dones']):
+            if done:
+                info = self.locals['infos'][i]
+                # WorldEnv.step에서 넣어준 episode_metrics가 있으면 기록
+                if 'episode_metrics' in info:
+                    for key, value in info['episode_metrics'].items():
+                        self.logger.record(key, value)
+        return True
+
 
 def train_start(
         gen_env:Callable[[], WorldEnv],
@@ -244,20 +263,22 @@ def train_start(
         device="auto"  # GPU 사용 설정
     )
 
-    # 콜백 - 모델 저장
-    checkpoint_callback = None
+    # 콜백
+    callbacks:list[BaseCallback] = [TensorboardCallback()]  # 요소별 점수
     if save_freq:
+        # 모델 저장 콜백
         checkpoint_callback = CheckpointCallback(
             save_freq=save_freq,
             save_path=CHECKPOINT_DIR,
             name_prefix='check'
         )
+        callbacks.append(checkpoint_callback)
 
     print("=== PPO 학습 시작 ===")
 
     model.learn(
         total_timesteps=steps,
-        callback=checkpoint_callback,
+        callback=callbacks,
         tb_log_name=run_name,
         progress_bar=True,
     )
@@ -315,14 +336,16 @@ def train_resume(
         )
     assert isinstance(model, PPO)
 
-    # 콜백 - 모델 저장
-    checkpoint_callback = None
+    # 콜백
+    callbacks:list[BaseCallback] = [TensorboardCallback()]  # 요소별 점수
     if save_freq:
+        # 모델 저장 콜백
         checkpoint_callback = CheckpointCallback(
             save_freq=save_freq,
             save_path=CHECKPOINT_DIR,
             name_prefix='check'
         )
+        callbacks.append(checkpoint_callback)
 
     if log_std:
         with torch.no_grad():
@@ -332,7 +355,7 @@ def train_resume(
 
     model.learn(
         total_timesteps=steps,
-        callback=checkpoint_callback,
+        callback=callbacks,
         tb_log_name=run_name,
         progress_bar=True,
 
