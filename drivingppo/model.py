@@ -119,7 +119,7 @@ class CNNFeatureExtractor(BaseFeaturesExtractor):
         )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        speed     = observations[:, OBSERVATION_IND_SPD : OBSERVATION_IND_SPD+1]
+        speed     = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD + 1]
         path_data = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
 
         reshaped = path_data.reshape(-1, LOOKAHEAD_POINTS, EACH_POINT_INFO_SIZE).permute(0, 2, 1)  # [Batch, 길이×채널] -> [Batch, 채널, 길이]
@@ -185,6 +185,47 @@ class CascadedPathExtractor(BaseFeaturesExtractor):
         output0 = self.layer0(path_data)
 
         return torch.cat((speed, output0), dim=1)
+
+
+class CNNCascadedExtractor(BaseFeaturesExtractor):
+    """
+    CNN 다음 CPE
+    """
+    def __init__(self, observation_space: gym.spaces.Box):
+
+        cnn_hidden_dim = 8
+        cpe_hidden_dim = 16
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * cpe_hidden_dim
+
+        super(CNNCascadedExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+
+        self.cnn = nn.Sequential(
+            nn.Conv1d(
+                in_channels=EACH_POINT_INFO_SIZE,
+                out_channels=cnn_hidden_dim,
+                kernel_size=2,
+                stride=1,
+                padding=1
+            ),
+            nn.ReLU()
+        )
+
+        self.cpe = CascadedPathEncoder(
+            num_points=LOOKAHEAD_POINTS,
+            point_dim=cnn_hidden_dim,
+            hidden_dim=cpe_hidden_dim
+        )
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed     = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD + 1]
+        path_data = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        cnn_input = path_data.reshape(-1, LOOKAHEAD_POINTS, EACH_POINT_INFO_SIZE).permute(0, 2, 1)
+        cnn_output = self.cnn(cnn_input)[:, :, :LOOKAHEAD_POINTS]
+        cpe_input = cnn_output.permute(0, 2, 1).flatten(start_dim=1)
+        cpe_output = self.cpe(cpe_input)
+
+        return torch.cat((speed, cpe_output), dim=1)
 
 
 class TensorboardCallback(BaseCallback):
