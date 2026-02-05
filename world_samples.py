@@ -17,6 +17,7 @@ MAP_H = 150
 NEAR = 3.0
 
 W_CONFIG = {
+    'map_border': False,
     'near': NEAR,
     'far': 999.9,
 }
