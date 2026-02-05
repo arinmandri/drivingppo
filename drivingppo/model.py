@@ -26,8 +26,8 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 
 # 훈련 결과 저장
-LOG_DIR = f"./ppo_tensorboard_logs/"
-CHECKPOINT_DIR = './ppo_world_checkpoints/'
+LOG_DIR = f"./logs/"
+CHECKPOINT_DIR = './checks/'
 
 
 class NoFeatureExtractor(BaseFeaturesExtractor):

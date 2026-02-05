@@ -22,8 +22,6 @@ from numpy import ndarray as Arr
 import gymnasium as gym
 from gymnasium import spaces
 
-LOG_FILE_PATH="training_log.txt"
-
 
 def get_state(world:World):
     """
@@ -368,13 +366,6 @@ class WorldEnv(gym.Env):
 
         if self.render_mode == 'debug':
             print(formatted_message, flush=True)
-
-        # try:
-        #     with open(LOG_FILE_PATH, "a", encoding="utf-8") as f:
-        #         f.write(formatted_message + "\n")
-        # except Exception as e:
-        #     # print(f"!!! 로그 저장 실패: {e}")
-        #     pass
 
 
     def close(self):
