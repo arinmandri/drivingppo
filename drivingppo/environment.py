@@ -143,6 +143,8 @@ class WorldEnv(gym.Env):
     time_gain_per_waypoint = 40_000
     time_gain_limit = 80_000
 
+    prev_d = -1.0
+
     def __init__(self,
                  world_generator:Callable[[], World],
                  max_time=120_000,
@@ -232,7 +234,7 @@ class WorldEnv(gym.Env):
         ending = ''
 
         s_norm = speed_norm(p.speed)  # 속도점수
-        distance = w.get_distance_to_wpoint() +1
+        distance = w.get_distance_to_wpoint()
         ang_nx  = w.get_relative_angle_to_wpoint()
         cos_nx  = math.cos(ang_nx)
 
@@ -252,6 +254,8 @@ class WorldEnv(gym.Env):
                 ending = '도착'
                 terminated = True
 
+            self.prev_d = -1.0
+
         # 전혀 엉뚱한 곳 감
         elif distance > w.far:
             reward_step[2] += 100.0 * p.speed / SPD_MAX_STD * cos_nx
@@ -261,7 +265,7 @@ class WorldEnv(gym.Env):
 
         # 시간 내에 도착 못 함
         elif w.t_acc >= self.time_limit:
-            reward_step[2] += -200.0
+            reward_step[2] += -50.0
             ending = '시간초과'
             truncated = True
 
@@ -283,7 +287,9 @@ class WorldEnv(gym.Env):
 
             reward_time = -0.5
 
-            stat_progress     = + (cos_nx * s_norm) * 0.6  if s_norm > 0 \
+            distance_d = distance - self.prev_d  if self.prev_d > 0  else 0.0
+            self.prev_d = distance
+            stat_progress     = - distance_d * 1.0  if s_norm > 0 \
                            else - s_norm * s_norm * 1.5  # 후진 진행 억제
             stat_orientation  = + cos_nx * 0.03
             total = reward_time + stat_progress + stat_orientation
@@ -353,7 +359,11 @@ class WorldEnv(gym.Env):
     def print_result(self):
         std = self.step_count
         if std:
-            self.print_log(f'총점 {int(self.reward_totals[0]):5d} | wpoint {self.reward_totals[1]:6.1f}({int(self.reward_totals[1]/std*100)}%) | time {self.reward_totals[2]:+7.2f} | prog {self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/std*100)}%) | ang {self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/std*100)}%)')
+            self.print_log(f'총점 {int(self.reward_totals[0]):5d} '
+                           f'| wpoint {self.reward_totals[1]:6.1f}({int(self.reward_totals[1]/std*100)}%) '
+                           f'| time {self.reward_totals[2]:+7.2f}({int(self.reward_totals[2]/std*100)}%) '
+                           f'| prog {self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/std*100)}%) '
+                           f'| ang {self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/std*100)}%)')
 
     def print_log(
             self,
