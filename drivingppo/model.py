@@ -279,8 +279,8 @@ def train_start(
         features_extractor_class=PyramidCNNFeatureExtractor,  #####################################################
         features_extractor_kwargs=dict(),
         net_arch=dict(
-            pi=[256, 256], # Actor
-            vf=[256, 256, 128]  # Critic
+            pi=[512, 512], # Actor
+            vf=[512, 512, 256]  # Critic
         )
     )
 
