@@ -302,11 +302,11 @@ class WorldEnv(gym.Env):
         if truncated or terminated:
             self.print_result()
             info['episode_metrics'] = {
-                'rewards/0.total':       self.reward_totals[0],
-                'rewards/1.wPoint':      self.reward_totals[1],
-                'rewards/2.time':        self.reward_totals[2],
-                'rewards/3.progress':    self.reward_totals[3],
-                'rewards/4.orientation': self.reward_totals[4],
+                'rewards/0.total':       self.reward_totals[0]/self.step_count,
+                'rewards/1.wPoint':      self.reward_totals[1]/self.step_count,
+                'rewards/2.time':        self.reward_totals[2]/self.step_count,
+                'rewards/3.progress':    self.reward_totals[3]/self.step_count,
+                'rewards/4.orientation': self.reward_totals[4]/self.step_count,
             }
 
         # Gymnasium 표준 반환
@@ -351,11 +351,8 @@ class WorldEnv(gym.Env):
         self.viewer.update()
 
     def print_result(self):
-        std = self.reward_totals[1]
-        if std < 1e-5:
-            self.print_log(f'총점 {int(self.reward_totals[0]):5d} | wpoint {self.reward_totals[1]:6.1f} | time {self.reward_totals[2]:+7.2f} | prog {self.reward_totals[3]:+7.2f} | ang {self.reward_totals[4]:+7.2f}')
-        else:
-            self.print_log(f'총점 {int(self.reward_totals[0]):5d} | wpoint {self.reward_totals[1]:6.1f} | time {self.reward_totals[2]:+7.2f}({int(self.reward_totals[2]/std*100)}%) | prog {self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/std*100)}%) | ang {self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/std*100)}%)')
+        std = self.step_count
+        self.print_log(f'총점 {int(self.reward_totals[0]):5d} | wpoint {self.reward_totals[1]:6.1f}({int(self.reward_totals[1]/std*100)}%) | time {self.reward_totals[2]:+7.2f} | prog {self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/std*100)}%) | ang {self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/std*100)}%)')
 
     def print_log(
             self,
