@@ -352,7 +352,8 @@ class WorldEnv(gym.Env):
 
     def print_result(self):
         std = self.step_count
-        self.print_log(f'총점 {int(self.reward_totals[0]):5d} | wpoint {self.reward_totals[1]:6.1f}({int(self.reward_totals[1]/std*100)}%) | time {self.reward_totals[2]:+7.2f} | prog {self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/std*100)}%) | ang {self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/std*100)}%)')
+        if std:
+            self.print_log(f'총점 {int(self.reward_totals[0]):5d} | wpoint {self.reward_totals[1]:6.1f}({int(self.reward_totals[1]/std*100)}%) | time {self.reward_totals[2]:+7.2f} | prog {self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/std*100)}%) | ang {self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/std*100)}%)')
 
     def print_log(
             self,
