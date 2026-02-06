@@ -283,7 +283,7 @@ class WorldEnv(gym.Env):
 
             reward_time = -0.5
 
-            stat_progress     = + (cos_nx * s_norm) * 0.3  if s_norm > 0 \
+            stat_progress     = + (cos_nx * s_norm) * 0.6  if s_norm > 0 \
                            else - s_norm * s_norm * 1.5  # 후진 진행 억제
             stat_orientation  = + cos_nx * 0.03
             total = reward_time + stat_progress + stat_orientation
