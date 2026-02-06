@@ -143,6 +143,8 @@ class WorldEnv(gym.Env):
     time_gain_per_waypoint = 40_000
     time_gain_limit = 80_000
 
+    prev_d = -1.0  # 음수: 기록없음
+
     def __init__(self,
                  world_generator:Callable[[], World],
                  max_time=120_000,
@@ -236,12 +238,20 @@ class WorldEnv(gym.Env):
         ang_nx  = w.get_relative_angle_to_wpoint()
         cos_nx  = math.cos(ang_nx)
 
+        distance_d = 0.0
+        if self.prev_d >= 0:
+            distance_d = distance - self.prev_d
+        self.prev_d = distance
+
+
         reward_step = [0.0 for _ in range(7)]
 
         # 목표점 도달
         if result_wpoint:
             reward_step[1] += 30.0 * cos_pv
             if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f})')
+
+            self.prev_d = -1.0
 
             # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
             self.time_limit += self.time_gain_per_waypoint
@@ -283,7 +293,7 @@ class WorldEnv(gym.Env):
 
             reward_time = -0.5
 
-            stat_progress     = + (cos_nx * s_norm) * 0.3  if s_norm > 0 \
+            stat_progress     = - distance_d * 0.3  if s_norm > 0 \
                            else - s_norm * s_norm * 1.5  # 후진 진행 억제
             stat_orientation  = + cos_nx * 0.03
             total = reward_time + stat_progress + stat_orientation
