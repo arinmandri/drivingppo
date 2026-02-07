@@ -243,19 +243,19 @@ class WorldEnv(gym.Env):
         # 목표점 도달
         if result_wpoint:
             reward_step[1] += 30.0 * cos_pv
-            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f})')
+
+            # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
+            self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
+            self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
+
+            self.prev_d = self.prev_d1
+
+            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f}) | 남은시간: {int((self.time_limit - w.t_acc)/1000)}')
 
             # 최종 목표 도달
             if w.arrived:
                 ending = '도착'
                 terminated = True
-
-            else:
-                # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
-                self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
-                self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
-
-                self.prev_d = self.prev_d1
 
         # 전혀 엉뚱한 곳 감
         elif distance > w.far:
