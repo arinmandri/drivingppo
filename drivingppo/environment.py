@@ -207,6 +207,8 @@ class WorldEnv(gym.Env):
             print(f'{self.estep_count} step --------------------------')
             print(observation_str(observation0))
 
+        self.history_action.append(action)  # 매스텝 액션 기록
+
         w = self.world
         p = w.player
 
@@ -243,6 +245,7 @@ class WorldEnv(gym.Env):
         # 목표점 도달
         if result_wpoint:
             reward_step[1] += 30.0 * cos_pv
+            self.history_cosnx.append(cos_nx)
 
             # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
             self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
@@ -306,15 +309,33 @@ class WorldEnv(gym.Env):
         for i in range(7):
             self.reward_totals[i] += reward_step[i]
         if truncated or terminated:
-            self.print_result()
-            std = self.estep_count * self.wstep_per_control
+
+            # 액션 분산
+            action_arr = np.array(self.history_action)
+            if len(action_arr) > 0:
+                var_forward = np.var(action_arr[:, 0])
+                var_steer = np.var(action_arr[:, 1])
+            else:
+                var_forward, var_steer = 0.0, 0.0
+
+            if len(self.history_cosnx) > 0:
+                mean_cosnx = sum(self.history_cosnx) / len(self.history_cosnx)
+            else:
+                mean_cosnx = 0.0, 0.0
+
+            wstep_count = self.estep_count * self.wstep_per_control
             info['episode_metrics'] = {
-                'rewards/0.total':       self.reward_totals[0]/std,
-                'rewards/1.wPoint':      self.reward_totals[1]/std,
-                'rewards/2.time':        self.reward_totals[2]/std,
-                'rewards/3.progress':    self.reward_totals[3]/std,
-                'rewards/4.orientation': self.reward_totals[4]/std,
+                'rewards/0.total':       self.reward_totals[0]/wstep_count,
+                'rewards/1.wPoint':      self.reward_totals[1]/wstep_count,
+                'rewards/2.time':        self.reward_totals[2]/wstep_count,
+                'rewards/3.progress':    self.reward_totals[3]/wstep_count,
+                'rewards/4.orientation': self.reward_totals[4]/wstep_count,
+                'action/var_forward':    var_forward,
+                'action/var_steer':      var_steer,
+                'mean_cosnx': mean_cosnx,
             }
+
+            self.print_result()
 
         self.prev_d = distance
         self.prev_d1 = w.get_distance_to_wpoint(1)
@@ -335,6 +356,8 @@ class WorldEnv(gym.Env):
         self.estep_count = 0
         self.reward_totals = [0.0 for _ in range(7)]
         self.time_limit = self.time_gain_limit  # 제한시간. 목표점 도달시마다 추가 획득.
+        self.history_action = []  # 액션 기록
+        self.history_cosnx = []
 
         self.prev_d  = w.get_distance_to_wpoint()
         self.prev_d1 = w.get_distance_to_wpoint(1)
@@ -362,13 +385,13 @@ class WorldEnv(gym.Env):
         self.viewer.update()
 
     def print_result(self):
-        std = self.estep_count * self.wstep_per_control
-        if std:
+        wstep_count = self.estep_count * self.wstep_per_control
+        if wstep_count:
             self.print_log(f'총점 {int(self.reward_totals[0]):5d} '
-                           f'| wpoint {self.reward_totals[1]:6.1f}({ int(self.reward_totals[1]/std*100)}%) '
-                           f'| time {  self.reward_totals[2]:+7.2f}({int(self.reward_totals[2]/std*100)}%) '
-                           f'| prog {  self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/std*100)}%) '
-                           f'| ang {   self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/std*100)}%)')
+                           f'| wpoint {self.reward_totals[1]:6.1f}({ int(self.reward_totals[1]/wstep_count*100)}%) '
+                           f'| time {  self.reward_totals[2]:+7.2f}({int(self.reward_totals[2]/wstep_count*100)}%) '
+                           f'| prog {  self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/wstep_count*100)}%) '
+                           f'| ang {   self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/wstep_count*100)}%)')
 
     def print_log(
             self,
