@@ -390,10 +390,25 @@ class WorldViewer:
         pz = player.z
 
         # 장애물
-        for z in range(world.MAP_H):
-            for x in range(world.MAP_W):
-                if world.obstacle_map[z][x] == 1:
-                    self.fcanvas.add_cell_filling(x, z, c['obstacle'])
+        if self.fcanvas.mode == 0:  # 전체 맵 보기
+            min_x = 0
+            max_x = world.MAP_W
+            min_z = 0
+            max_z = world.MAP_H
+        else:
+            view_range = 25 # 시야 범위
+            min_x = max(0, int(px) - view_range)
+            max_x = min(world.MAP_W, int(px) + view_range)
+            min_z = max(0, int(pz) - view_range)
+            max_z = min(world.MAP_H, int(pz) + view_range)
+        sub_map = world.obstacle_map[min_z:max_z, min_x:max_x]
+        obs_z, obs_x = np.where(sub_map == 1)
+
+        # 3. 그리기
+        # 가져온 인덱스는 잘라낸 맵 기준이므로, 원래 좌표(min_x, min_z)를 더해줍니다.
+        # zip을 사용하여 파이썬 레벨의 루프 횟수를 최소화합니다.
+        for z, x in zip(obs_z, obs_x):
+             self.fcanvas.add_cell_filling(x + min_x, z + min_z, c['obstacle'])
 
         # 자취
         trace_points = world.trace
