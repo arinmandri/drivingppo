@@ -540,7 +540,8 @@ class WorldController(WorldViewer):
                  url_base='http://127.0.0.1:5000',
                  frame_delay=30,
                  use_real_time=False,  # 스텝 사이 실제 흐른 시간량 사용 / 스텝별 동일 시간량(고정값) 부여
-                 time_accel=1          # 배속
+                 time_accel=1,         # 배속
+                 use_stop=True,
         ):
         super().__init__(world, scale, frame_delay)
 
@@ -551,6 +552,7 @@ class WorldController(WorldViewer):
         self.trackingMode = config.get('TrackingMode', False)  # T: 서버로 get_action 호출해서 조작. F:키보드조작 가능.
         self.logMode      = config.get('LogMode',      False)  # /info로 정보 보낼지
         self.pause = False     # 일시정지
+        self.use_stop = use_stop
 
         # world
         self.world_init:World = self.world
@@ -785,15 +787,15 @@ class WorldController(WorldViewer):
         """
         키보드로 조작상태 업데이트
         """
+        target_stop = False
         if self.keys['w']:
             target_ws = 1.0
-            target_stop = False
         elif self.keys['s']:
             target_ws = -1.0
-            target_stop = False
         else:
             target_ws = 0.0
-            target_stop = True
+            if self.use_stop:
+                target_stop = True
 
         if self.keys['a']:
             target_ad = -1.0
@@ -826,7 +828,7 @@ def create_sample():
     player = Car({
         'playerPos': {'x': 10, 'z': 10},
         "playerSpeed": 0,
-        "playerBodyX": 270 * rad_to_deg,
+        "playerBodyX": 0,  # 단위: 라디안 아니고 도.
         "playerBodyY": 0,
         "playerBodyZ": 0,
         "playerHealth": 0,
@@ -841,7 +843,7 @@ def create_sample():
 
     world = World(
         player=player,
-        wh=(MAP_W, MAP_H),
+        wh=(100, 100),
     #   obstacle_map=obstacle_map,
         waypoints=waypoints,
         config={
@@ -860,9 +862,10 @@ def create_sample():
         frame_delay=33,
         config={
             'TrackingMode': False,
-            'LogMode': True,
+            'LogMode': False,
             'api_delay': 1000
-        })
+        },
+        use_stop=False)
 
 if __name__ == "__main__":
     app = create_sample()

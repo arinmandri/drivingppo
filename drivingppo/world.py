@@ -107,12 +107,14 @@ class Car:
     w = 1.5
     h = 3
 
-    def __init__(self, init_status={}):
+    engine_power = 0.001 *  2.3
+    brake_power  = 0.001 *  2.7
+    friction     = 0.001 *  0.3
+    stop         = 0.001 * 50
+    turn_speed   = 0.001 * 40 * deg_to_rad
+    drag_coeff   = 0.001 * 0.02  # 공기저항 계수: 속도의 제곱에 비례하여 저항 생성
 
-        self.accel       = 0.001*  2.43
-        self.friction    = 0.001*  2.43
-        self.brake       = 0.001* 50
-        self.turn_speed  = 0.001* 40 * deg_to_rad
+    def __init__(self, init_status={}):
 
         self.status = init_status
 
@@ -145,14 +147,6 @@ class Car:
         self.angle_x:float = init_status.get('playerBodyX', 0) * deg_to_rad
         self.speed:float   = init_status.get('playerSpeed', 0)
 
-    def speed_max_w(self, weight):
-        # 전진 최대속력
-        return weight * Car.SPEED_MAX_W
-
-    def speed_max_s(self, weight):
-        # 후진 최대속력 (음수)
-        return weight * Car.SPEED_MAX_S
-
     def get_corners(self) -> list[tuple[float, float]]:
         """
         네 꼭지점 위치 (그리기용)
@@ -181,51 +175,68 @@ class Car:
         return points
 
 
+    def apply_drag_and_rolling(self, dt):
+        '''현재 속도에 따른 자연적인 저항력 적용'''
+        drag = self.drag_coeff * (self.speed ** 2)
+        rolling = self.friction
+
+        if self.speed > 0:
+            self.speed -= (drag + rolling) * dt
+            if self.speed < 0:  self.speed = 0
+        if self.speed < 0:
+            self.speed += (drag + rolling) * dt
+            if self.speed > 0:  self.speed = 0
+
     def control_w(self, weight, dt):
         """
-        전진가속 동작
+        전진 가속
         """
         if weight < 0: return
 
-        max = self.speed_max_w(weight)
+        # 마찰 적용
+        self.apply_drag_and_rolling(dt)
 
-        if self.speed < max:  # 최대속력보다 작음: 가속
-            self.speed += self.accel * weight * dt
-            if self.speed > max:
-                self.speed = max
+        # 후진 중: 브레이크
+        if self.speed < 0:
+            decel_force = self.brake_power * weight
+            self.speed += decel_force * dt
+            if self.speed > 0: self.speed = 0
 
-        if self.speed > max:  # 최대속력보다 큼: 감속
-            self.speed -= self.accel * weight * dt
-            if self.speed < 0:
-                self.speed = 0
+        # 전진/정지 중: 가속
+        elif self.speed >= 0:
+            force = self.engine_power * weight
+            self.speed += force * dt
 
     def control_s(self, weight, dt):
         """
-        후진가속 동작
+        후진 가속
         """
         if weight < 0: return
 
-        max = self.speed_max_s(weight)
+        self.apply_drag_and_rolling(dt)
 
-        if self.speed > max:  # 최대속력보다 작음: 가속
-            self.speed -= self.accel * weight * dt
-            if self.speed < max:
-                self.speed = max
+        # 전진 중: 브레이크
+        if self.speed > 0:
+            decel_force = self.brake_power * weight
+            self.speed -= decel_force * dt
+            if self.speed < 0: self.speed = 0
 
-        if self.speed < max:  # 최대속력보다 큼: 감속
-            self.speed += self.accel * weight * dt
-            if self.speed > 0:
-                self.speed = 0
+        # 후진/정지 중: 가속
+        elif self.speed <= 0:
+            force = self.engine_power * weight
+            self.speed -= force * dt
 
     def control_stop(self, dt):
         """
         브레이크 동작
         """
+        self.apply_drag_and_rolling(dt)
+
         if self.speed > 0:
-            self.speed -= self.brake * dt
+            self.speed -= self.stop * dt
             if self.speed < 0: self.speed = 0
         elif self.speed < 0:
-            self.speed += self.brake * dt
+            self.speed += self.stop * dt
             if self.speed > 0: self.speed = 0
 
     def control_ad(self, weight, dt):
@@ -463,6 +474,8 @@ class World:
                 self.player.control_w(self.ws, dt)
             elif self.ws < 0:
                 self.player.control_s(-self.ws, dt)
+            else:
+                self.player.apply_drag_and_rolling(dt)
 
         self.player.control_ad(self.ad, dt)
 
@@ -508,7 +521,7 @@ class World:
         rel_ang = (rel_ang + pi) % pi2 - pi
 
         return rel_ang
-    
+
     def __ind_rel_to_abs(self, index_rel:int):
         index = self.__waypoint_idx + index_rel
         if index < 0:
