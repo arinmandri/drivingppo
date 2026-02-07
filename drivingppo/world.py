@@ -228,14 +228,6 @@ class Car:
             self.speed += self.brake * dt
             if self.speed > 0: self.speed = 0
 
-    def control_friction(self, dt):
-        if self.speed > 0:
-            self.speed -= self.friction * dt
-            if self.speed < 0: self.speed = 0
-        elif self.speed < 0:
-            self.speed += self.friction * dt
-            if self.speed > 0: self.speed = 0
-
     def control_ad(self, weight, dt):
         """
         선회 동작
@@ -321,20 +313,14 @@ class World:
         self.trace = [(self.player.x, self.player.z, 0.0)]
         self.trace_count = 0
         self.trace_max = 800
-        self.use_stop = config.get('use_stop', True)
 
         # 목표점
         self.__waypoints:list[tuple[float, float]] = waypoints
         self.__waypoint_idx:int = 0
 
-        self.control_status = {  # '/get_action' 응답과 일치시킴
-            "moveWS":   {"command": "", "weight": 0},
-            "moveAD":   {"command": "", "weight": 0},
-            # XXX
-            # "turretQE": {"command": "", "weight": 0},
-            # "turretRF": {"command": "", "weight": 0},
-            # "fire": False,
-        }
+        self.ws:float  = 0.0      # -1.0 (후진) ~ 1.0 (전진)
+        self.ad:float  = 0.0      # -1.0 (좌회전) ~ 1.0 (우회전)
+        self.stop:bool = False   # True면 정지(브레이크)
 
     def __str__(self):
         return f"World-{self.id}({self.size})"
@@ -411,15 +397,10 @@ class World:
                 if self.map_border: return True
         return False
 
-    def moveWS(self, command:str, weight:float):
-        # weight = max(min(weight, 1.0), 0.1)  # Tank Challenge API 문서에는 0.1에서 1.0 사이라고 하지만 실제로는 다 됨.
-        self.control_status['moveWS']['command'] = command
-        self.control_status['moveWS']['weight']  = weight
-
-    def moveAD(self, command:str, weight:float):
-        # weight = max(min(weight, 1.0), 0.1)  # Tank Challenge API 문서에는 0.1에서 1.0 사이라고 하지만 실제로는 다 됨.
-        self.control_status['moveAD']['command'] = command
-        self.control_status['moveAD']['weight']  = weight
+    def set_action(self, ws:float, ad:float, stop:bool=False):
+        self.ws = max(min(ws, 1.0), -1.0)
+        self.ad = max(min(ad, 1.0), -1.0)
+        self.stop = stop
 
     def step(self, dt, callback:Callable|None=None) -> tuple[bool, bool, bool]:
         """
@@ -436,11 +417,8 @@ class World:
         if result_p: # 플레이어 움직임
             self.trace_count += 1
             if self.trace_count >= 3:
-                ws = self.control_status['moveWS']['weight']
-                ws = -ws  if self.control_status['moveWS']['command'] == 'S'  else ws
                 self.trace_count = 0
-                s = min(ws, 1.0)
-                self.trace.append((p.x, p.z, s))
+                self.trace.append((p.x, p.z, self.ws))
             if len(self.trace) > self.trace_max: # 기록이 길면 오래된거 버림
                 self.trace = self.trace[-self.trace_max:]
 
@@ -478,32 +456,15 @@ class World:
         """
         조작상태에 따라 동작
         """
-
-        ws = self.control_status.get('moveWS', None)
-        if ws:
-            command = ws.get('command', '')
-            weight  = ws.get('weight', 0)
-            if command == 'W':
-                self.player.control_w(weight, dt)
-            elif command == 'S':
-                self.player.control_s(weight, dt)
-            elif command == 'STOP' and self.use_stop:
-                self.player.control_stop(dt)
-            else:
-                self.player.control_friction(dt)
+        if self.stop:
+            self.player.control_stop(dt)
         else:
-            self.moveWS('', 0)
+            if self.ws > 0:
+                self.player.control_w(self.ws, dt)
+            elif self.ws < 0:
+                self.player.control_s(-self.ws, dt)
 
-        ad = self.control_status.get('moveAD', None)
-        if ad:
-            command = ad.get('command', '')
-            weight  = ad.get('weight', 0)
-            if command == 'A':
-                self.player.control_ad(-weight, dt)
-            if command == 'D':
-                self.player.control_ad(weight, dt)
-        else:
-            self.moveAD('', 0)
+        self.player.control_ad(self.ad, dt)
 
     def get_curr_wpoint(self, index_rel:int=0) -> tuple[float, float]:
         index = self.__ind_rel_to_abs(index_rel)

@@ -115,20 +115,8 @@ def apply_action(world:World, action:Arr):
     """
     행동 벡터 [A_forward, A_steer]를 World의 제어 함수로 변환하여 적용
     """
-
-    A_forward, A_steer = action
-
-    # WS
-    if A_forward > 0:
-        world.moveWS('W', A_forward)
-    else:
-        world.moveWS('S', -A_forward)
-
-    # AD
-    if A_steer > 0: # 양수: 우회전 (D)
-        world.moveAD('D', A_steer)
-    else: # 음수: 좌회전 (A)
-        world.moveAD('A', -A_steer)
+    ws, ad = action
+    world.set_action(ws, ad, False)
 
 def action_str(action):
     return f'ACTION: {action[0]:.2f}  {action[1]:.2f}'

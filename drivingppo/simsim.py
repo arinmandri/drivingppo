@@ -477,12 +477,11 @@ class WorldViewer:
             BAR_MAX = 40
             PANEL_X = 50
             PANEL_Y = self.CANVAS_H - 50
-            controls = world.control_status
-            ws_stop    = controls["moveWS"]["command"] == 'STOP' and world.use_stop
-            ws_dir     = 1 if controls["moveWS"]["command"] == 'W' else -1
-            ad_dir     = 1 if controls["moveAD"]["command"] == 'D' else -1
-            ws_weight  = controls["moveWS"]["weight"] if not ws_stop else 0
-            ad_weight  = controls["moveAD"]["weight"]
+            ws_stop    = world.stop
+            ws_dir     = 1 if world.ws > 0 else -1
+            ad_dir     = 1 if world.ad > 0 else -1
+            ws_weight  = abs(world.ws) if not ws_stop else 0
+            ad_weight  = abs(world.ad)
             # WS 막대
             self.canvas.create_rectangle(
                 PANEL_X-BAR_W, PANEL_Y, PANEL_X+BAR_W+1, PANEL_Y - ws_weight*BAR_MAX*ws_dir,
@@ -748,7 +747,30 @@ class WorldController(WorldViewer):
     def call_api_act_(self, req_data):
         data = api_post(self.API_ACT, req_data)
         if data:
-            self.world.control_status = data
+            ws_data = data.get("moveWS", {})
+            ws_cmd    = ws_data.get("command", "")
+            ws_weight = ws_data.get("weight", 0)
+
+            target_ws = 0.0
+            target_stop = False
+
+            if ws_cmd == 'STOP':
+                target_stop = True
+                target_ws = 0.0
+            elif ws_cmd == 'W':
+                target_ws = ws_weight
+            elif ws_cmd == 'S':
+                target_ws = -ws_weight
+
+            ad_data = data.get("moveAD", {})
+            ad_cmd = ad_data.get("command", "")
+            ad_w   = ad_data.get("weight", 0)
+
+            target_ad = 0.0
+            if ad_cmd == 'D': target_ad = ad_w
+            elif ad_cmd == 'A': target_ad = -ad_w
+
+            self.world.set_action(target_ws, target_ad, target_stop)
 
 
     # 키보드 조작
@@ -764,24 +786,23 @@ class WorldController(WorldViewer):
         키보드로 조작상태 업데이트
         """
         if self.keys['w']:
-            self.world.control_status['moveWS']['command'] = 'W'
-            self.world.control_status['moveWS']['weight'] = 1
+            target_ws = 1.0
+            target_stop = False
         elif self.keys['s']:
-            self.world.control_status['moveWS']['command'] = 'S'
-            self.world.control_status['moveWS']['weight'] = 1
+            target_ws = -1.0
+            target_stop = False
         else:
-            self.world.control_status['moveWS']['command'] = 'STOP'
-            self.world.control_status['moveWS']['weight'] = 0
+            target_ws = 0.0
+            target_stop = True
 
         if self.keys['a']:
-            self.world.control_status['moveAD']['command'] = 'A'
-            self.world.control_status['moveAD']['weight'] = 1
+            target_ad = -1.0
         elif self.keys['d']:
-            self.world.control_status['moveAD']['command'] = 'D'
-            self.world.control_status['moveAD']['weight'] = 1
+            target_ad = 1.0
         else:
-            self.world.control_status['moveAD']['command'] = ''
-            self.world.control_status['moveAD']['weight'] = 0
+            target_ad = 0.0
+
+        self.world.set_action(target_ws, target_ad, target_stop)
 
 
     def draw(self):
