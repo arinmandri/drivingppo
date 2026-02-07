@@ -196,6 +196,7 @@ class WorldEnv(gym.Env):
             print(observation_str(observation0))
 
         self.history_action.append(action)  # 매스텝 액션 기록
+        ws, ad = action
 
         w = self.world
         p = w.player
@@ -227,6 +228,8 @@ class WorldEnv(gym.Env):
         distance = w.get_distance_to_wpoint()
         ang_nx  = w.get_relative_angle_to_wpoint()
         cos_nx  = math.cos(ang_nx)
+
+        self.history_speed.append(p.speed)
 
         reward_step = [0.0 for _ in range(7)]
 
@@ -277,18 +280,22 @@ class WorldEnv(gym.Env):
         else:
             # 진행 보상
 
-            reward_time = -0.5
+            reward_time = -0.4
 
             distance_d = distance - self.prev_d
-            stat_progress     = - distance_d * 1.0  if s_norm > 0 \
+            stat_progress     = - distance_d * 0.8  if s_norm > 0 \
                            else - s_norm * s_norm * 1.5  # 후진 진행 억제
             stat_orientation  = + cos_nx * 0.03
-            total = reward_time + stat_progress + stat_orientation
-            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ang {stat_orientation:+5.2f} --> {total:+6.2f}')
+            reward_action_ws  = - ws**2 * 0.3
+            reward_action_ad  = - ad**2 * 0.3
+            total = reward_time + stat_progress + stat_orientation + reward_action_ws + reward_action_ad
+            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ang {stat_orientation:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} --> {total:+6.2f}')
 
             reward_step[2] += self.wstep_per_control * reward_time
             reward_step[3] += self.wstep_per_control * stat_progress
             reward_step[4] += self.wstep_per_control * stat_orientation
+            reward_step[5] += self.wstep_per_control * reward_action_ws
+            reward_step[6] += self.wstep_per_control * reward_action_ad
 
         info = {'current_time': w.t_acc / 1000.0}
 
@@ -301,15 +308,13 @@ class WorldEnv(gym.Env):
             # 액션 분산
             action_arr = np.array(self.history_action)
             if len(action_arr) > 0:
-                var_forward = np.var(action_arr[:, 0])
-                var_steer = np.var(action_arr[:, 1])
+                var_ws = np.var(action_arr[:, 0])
+                var_ad = np.var(action_arr[:, 1])
             else:
-                var_forward, var_steer = 0.0, 0.0
+                var_ws, var_ad = 0.0, 0.0
 
-            if len(self.history_cosnx) > 0:
-                mean_cosnx = sum(self.history_cosnx) / len(self.history_cosnx)
-            else:
-                mean_cosnx = 0.0, 0.0
+            mean_cosnx = sum(self.history_cosnx) / len(self.history_cosnx)  if len(self.history_cosnx) > 0  else 0.0
+            mean_speed = sum(self.history_speed) / len(self.history_speed)  if len(self.history_speed) > 0  else 0.0
 
             wstep_count = self.estep_count * self.wstep_per_control
             info['episode_metrics'] = {
@@ -318,9 +323,12 @@ class WorldEnv(gym.Env):
                 'rewards/2.time':        self.reward_totals[2]/wstep_count,
                 'rewards/3.progress':    self.reward_totals[3]/wstep_count,
                 'rewards/4.orientation': self.reward_totals[4]/wstep_count,
-                'action/var_forward':    var_forward,
-                'action/var_steer':      var_steer,
-                'mean_cosnx': mean_cosnx,
+                'rewards/5.ws':          self.reward_totals[5]/wstep_count,
+                'rewards/6.ad':          self.reward_totals[6]/wstep_count,
+                'action/var_ws': var_ws,
+                'action/var_ad': var_ad,
+                'metrics/mean_cosnx': mean_cosnx,
+                'metrics/mean_speed': mean_speed,
             }
 
             self.print_result()
@@ -346,6 +354,7 @@ class WorldEnv(gym.Env):
         self.time_limit = self.time_gain_limit  # 제한시간. 목표점 도달시마다 추가 획득.
         self.history_action = []  # 액션 기록
         self.history_cosnx = []
+        self.history_speed = []
 
         self.prev_d  = w.get_distance_to_wpoint()
         self.prev_d1 = w.get_distance_to_wpoint(1)
@@ -379,7 +388,9 @@ class WorldEnv(gym.Env):
                            f'| wpoint {self.reward_totals[1]:6.1f}({ int(self.reward_totals[1]/wstep_count*100)}%) '
                            f'| time {  self.reward_totals[2]:+7.2f}({int(self.reward_totals[2]/wstep_count*100)}%) '
                            f'| prog {  self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/wstep_count*100)}%) '
-                           f'| ang {   self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/wstep_count*100)}%)')
+                           f'| ang {   self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/wstep_count*100)}%) '
+                           f'| ws {    self.reward_totals[5]:+7.2f}({int(self.reward_totals[5]/wstep_count*100)}%) '
+                           f'| ad {    self.reward_totals[6]:+7.2f}({int(self.reward_totals[5]/wstep_count*100)}%)')
 
     def print_log(
             self,
