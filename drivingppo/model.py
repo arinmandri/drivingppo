@@ -1,5 +1,6 @@
 from typing import Callable, Literal
 import time
+from collections import defaultdict
 
 from .world import World
 from .environment import WorldEnv
@@ -352,5 +353,85 @@ def run(
             if terminated or truncated: break
 
     print(f"에피소드 종료. 총 보상: {episode_reward:.2f}")
+
+    env.close()
+
+
+def evaluate(
+        world_generator:Callable[[], World],
+        model:PPO|str,
+        episode_num=100,
+        verbose:bool=True,
+        csv_path:str="results.csv",
+):
+    import numpy as np
+    import pandas as pd
+
+    env = WorldEnv(
+        world_generator=world_generator,
+        render_mode=None,
+    )
+
+    if type(model) == str:
+        model = PPO.load(CHECKPOINT_DIR+model, env=env)
+    assert isinstance(model, PPO)
+
+    print(f"{episode_num}회 에피소드 평가 시작...")
+
+    all_metrics = defaultdict(list)
+    episode_rewards = []
+    episode_lengths = []
+
+    for i in range(episode_num):
+        i1 = i+1
+        checkPeriod = episode_num // 10
+        obs, info = env.reset()
+        done = False
+        truncated = False
+        total_reward = 0
+        esteps = 0
+
+        while not (done or truncated):
+            # 에피소드 진행
+            action, _ = model.predict(obs, deterministic=True)
+            obs, reward, done, truncated, info = env.step(action)
+            total_reward += reward
+            esteps += 1
+
+            if done or truncated:
+                episode_rewards.append(total_reward)
+                episode_lengths.append(esteps)
+
+                if 'episode_metrics' in info:
+                    for key, value in info['episode_metrics'].items():#type:ignore
+                        all_metrics[key].append(value)
+
+                # 진행 상황 출력
+                if i1 % checkPeriod == 0:
+                    if verbose: print(f"[{i1}/{episode_num}] 완료 - Reward: {total_reward:.2f}, Steps: {esteps}")
+
+    if verbose: print("\n" + "="*41)
+    if verbose: print(f"평가 결과 ({episode_num} 에피소드 평균)")
+    if verbose: print("="*41)
+
+    mean_reward = np.mean(episode_rewards)
+    std_reward  = np.std(episode_rewards)
+    mean_len    = np.mean(episode_lengths)
+
+    if verbose: print(f"Total Reward  : {mean_reward:.2f} ± {std_reward:.2f}")
+    if verbose: print(f"Episode Length: {mean_len:.1f}")
+
+    if all_metrics:
+        if verbose: print("-" * 41)
+        df_metrics = pd.DataFrame(all_metrics)
+
+        summary = df_metrics.describe().loc[['mean', 'std']].T
+        if verbose: print(summary)
+
+        if csv_path:
+            df_metrics.to_csv(csv_path, index=False)
+            if verbose: print("\n세부 결과가 'evaluation_results.csv'로 저장됨.")
+    else:
+        if verbose: print("\n⚠️ info['episode_metrics']가 발견되지 않음.")
 
     env.close()
