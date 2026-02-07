@@ -140,23 +140,24 @@ class WorldEnv(gym.Env):
     World에서 주행법을 강화학습하기 위한 gym 환경 클래스.
     """
 
-    time_gain_per_waypoint = 10_000
-    time_gain_limit = 20_000
-
     def __init__(self,
                  world_generator:Callable[[], World],
                  max_time=120_000,
                  time_step=111,
                  wstep_per_control=3,
+                 time_gain_per_waypoint_rate=500,
+                 time_gain_limit=20_000,
                  render_mode:Literal['window','debug']|None=None,
                  auto_close_at_end=True):
 
         super().__init__()
         self.closed = False
 
-        self.time_step = time_step
+        self.time_step = time_step  # 월드의 1스텝당 흐르는 시간(천분초)
         self.wstep_per_control = wstep_per_control  # 조작값 변경은 월드의 n스텝마다 한 번. Tank Challenge에서도 FPS는 30이어도 API 요청은 최소 0.1초마다 한 번으로 설정 가능하다.
-        self.max_time = max_time  # 최대 에피소드 타임
+        self.max_time = max_time  # 최대 에피소드 길이(천분초)
+        self.time_gain_per_waypoint_rate = time_gain_per_waypoint_rate  # 다음 목표점까지 거리 1당 획득 시간(천분초)
+        self.time_gain_limit = time_gain_limit  # 남은 제한시간 최대량(천분초)
 
         # Action: [A_forward, A_steer]
         self.action_space = spaces.Box(  # Forward, Steer
@@ -244,16 +245,17 @@ class WorldEnv(gym.Env):
             reward_step[1] += 30.0 * cos_pv
             if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f})')
 
-            # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
-            self.time_limit += self.time_gain_per_waypoint
-            self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
-
             # 최종 목표 도달
             if w.arrived:
                 ending = '도착'
                 terminated = True
 
-            self.prev_d = self.prev_d1
+            else:
+                # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
+                self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
+                self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
+
+                self.prev_d = self.prev_d1
 
         # 전혀 엉뚱한 곳 감
         elif distance > w.far:
