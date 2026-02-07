@@ -436,8 +436,10 @@ class World:
         if result_p: # 플레이어 움직임
             self.trace_count += 1
             if self.trace_count >= 3:
+                ws = self.control_status['moveWS']['weight']
+                ws = -ws  if self.control_status['moveWS']['command'] == 'S'  else ws
                 self.trace_count = 0
-                s = min(p.speed / SPD_MAX_STD, 1.0)
+                s = min(ws, 1.0)
                 self.trace.append((p.x, p.z, s))
             if len(self.trace) > self.trace_max: # 기록이 길면 오래된거 버림
                 self.trace = self.trace[-self.trace_max:]
