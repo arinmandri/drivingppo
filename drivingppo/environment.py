@@ -143,8 +143,6 @@ class WorldEnv(gym.Env):
     time_gain_per_waypoint = 40_000
     time_gain_limit = 80_000
 
-    prev_d = -1.0
-
     def __init__(self,
                  world_generator:Callable[[], World],
                  max_time=120_000,
@@ -254,7 +252,7 @@ class WorldEnv(gym.Env):
                 ending = '도착'
                 terminated = True
 
-            self.prev_d = -1.0
+            self.prev_d = self.prev_d1
 
         # 전혀 엉뚱한 곳 감
         elif distance > w.far:
@@ -287,8 +285,7 @@ class WorldEnv(gym.Env):
 
             reward_time = -0.5
 
-            distance_d = distance - self.prev_d  if self.prev_d > 0  else 0.0
-            self.prev_d = distance
+            distance_d = distance - self.prev_d
             stat_progress     = - distance_d * 1.0  if s_norm > 0 \
                            else - s_norm * s_norm * 1.5  # 후진 진행 억제
             stat_orientation  = + cos_nx * 0.03
@@ -315,6 +312,9 @@ class WorldEnv(gym.Env):
                 'rewards/4.orientation': self.reward_totals[4]/self.step_count,
             }
 
+        self.prev_d = distance
+        self.prev_d1 = w.get_distance_to_wpoint(1)
+
         # Gymnasium 표준 반환
         return observation1, reward_step[0], terminated, truncated, info
 
@@ -325,18 +325,19 @@ class WorldEnv(gym.Env):
         """
         super().reset(seed=seed)
 
-        self.reset_randomly()
+        w = self.world_generator()
+        self.world = w
 
         self.step_count = 0
         self.reward_totals = [0.0 for _ in range(7)]
         self.time_limit = self.time_gain_limit  # 제한시간. 목표점 도달시마다 추가 획득.
 
+        self.prev_d  = w.get_distance_to_wpoint()
+        self.prev_d1 = w.get_distance_to_wpoint(1)
+
         observation = self.observation
         info = {}
         return observation, info
-
-    def reset_randomly(self):
-        self.world = self.world_generator()
 
 
     def render(self):
