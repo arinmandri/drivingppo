@@ -430,7 +430,7 @@ def evaluate(
 
         if csv_path:
             df_metrics.to_csv(csv_path, index=False)
-            if verbose: print("\n세부 결과가 'evaluation_results.csv'로 저장됨.")
+            if verbose: print(f"\n세부 결과가 저장: {csv_path}")
     else:
         if verbose: print("\n⚠️ info['episode_metrics']가 발견되지 않음.")
 
