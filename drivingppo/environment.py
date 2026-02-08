@@ -312,6 +312,7 @@ class WorldEnv(gym.Env):
         reward_step[0] = sum(reward_step[1:])
         for i in range(7):
             self.reward_totals[i] += reward_step[i]
+
         if truncated or terminated:
 
             # 액션 분산
@@ -331,7 +332,11 @@ class WorldEnv(gym.Env):
                 speed_mean = 0.0
 
             wstep_count = self.estep_count * self.wstep_per_control
+
             info['episode_metrics'] = {
+                'ending/type': ending,
+                'ending/estep': self.estep_count,
+                'ending/wstep': self.estep_count * self.wstep_per_control,
                 'rewards/0.total':       self.reward_totals[0]/wstep_count,
                 'rewards/1.wPoint':      self.reward_totals[1]/wstep_count,
                 'rewards/2.time':        self.reward_totals[2]/wstep_count,
