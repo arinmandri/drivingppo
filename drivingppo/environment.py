@@ -189,6 +189,9 @@ class WorldEnv(gym.Env):
     def observation(self):
         return get_state(self.world)
 
+    @property
+    def time_remaining(self):
+        return self.time_limit - self.world.t_acc
 
     def step(self, action):
         """
@@ -201,7 +204,7 @@ class WorldEnv(gym.Env):
 
         self.estep_count += 1
         if self.render_mode == 'debug':
-            print(f'{self.estep_count} step --------------------------')
+            print(f'{self.estep_count} step -------------------------- 남은시간 {int((self.time_remaining)/1000)}')
             print(observation_str(observation0))
 
         self.action_history.append(action)  # 매스텝 액션 기록
@@ -253,7 +256,7 @@ class WorldEnv(gym.Env):
 
             self.prev_d = self.prev_d1
 
-            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f}) | 남은시간: {int((self.time_limit - w.t_acc)/1000)}')
+            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f})')
 
             # 최종 목표 도달
             if w.arrived:
@@ -403,9 +406,8 @@ class WorldEnv(gym.Env):
                            f'| wpoint {self.reward_totals[1]:6.1f}({ int(self.reward_totals[1]/wstep_count*100)}%) '
                            f'| time {  self.reward_totals[2]:+7.2f}({int(self.reward_totals[2]/wstep_count*100)}%) '
                            f'| prog {  self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/wstep_count*100)}%) '
-                           f'| ang {   self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/wstep_count*100)}%) '
                            f'| ws {    self.reward_totals[5]:+7.2f}({int(self.reward_totals[5]/wstep_count*100)}%) '
-                           f'| ad {    self.reward_totals[6]:+7.2f}({int(self.reward_totals[5]/wstep_count*100)}%)')
+                           f'| ad {    self.reward_totals[6]:+7.2f}({int(self.reward_totals[6]/wstep_count*100)}%)')
 
     def print_log(
             self,
