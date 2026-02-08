@@ -257,33 +257,33 @@ class WorldEnv(gym.Env):
 
             # 최종 목표 도달
             if w.arrived:
-                ending = '도착'
+                ending = 'arrived'
                 terminated = True
 
         # 전혀 엉뚱한 곳 감
         elif distance > w.far:
             reward_step[2] += 100.0 * p.speed / SPD_MAX_STD * cos_nx
             if self.render_mode == 'debug': print(f'LOST ({distance:.1f} > {w.far:.1f}) reward: {reward_step[2]:.2f}')
-            ending = '길잃음'
+            ending = 'lost'
             truncated = True
 
         # 시간 내에 도착 못 함
         elif w.t_acc >= self.time_limit:
             reward_step[2] += -150.0
-            ending = '시간초과'
+            ending = 'timeover'
             truncated = True
 
         # 획득한 시간은 모자르지 않으나 그냥 이제까지 많이 함.
         elif w.t_acc >= self.max_time:
-            ending = '시간한계'
+            ending = 'timeout'
             truncated = True
 
         if truncated or terminated:
             icon = \
-                '✅' if ending == '도착' else \
-                '▶️' if ending == '시간한계' else \
-                '👻' if ending == '길잃음' else \
-                '⏰' if ending == '시간초과' else '??'
+                '✅' if ending == 'arrived' else \
+                '▶️' if ending == 'timeout' else \
+                '👻' if ending == 'lost' else \
+                '⏰' if ending == 'timeover' else '??'
             self.print_log(f'결과{icon} 도착: {w.waypoint_idx:3d}/{w.path_len:3d} | 시간: {int(w.t_acc/1000):3d}/{int(self.time_limit/1000):3d}/{int(self.max_time/1000):3d} 초 ({int(w.t_acc/self.max_time*100):3d}%) | 위치: {int(p.x):4d}, {int(p.z):4d} ({int(p.x/self.world.MAP_W*100):3d}%, {int(p.z/self.world.MAP_H*100):3d}%)')
 
         else:

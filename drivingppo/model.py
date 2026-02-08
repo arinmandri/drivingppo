@@ -416,26 +416,47 @@ def evaluate(
                 if i1 % checkPeriod == 0:
                     if verbose: print(f"[{i1}/{episode_num}] 완료 - Reward: {total_reward:.2f}, Steps: {esteps}")
 
-    if verbose: print("\n" + "="*41)
-    if verbose: print(f"평가 결과 ({episode_num} 에피소드 평균)")
-    if verbose: print("="*41)
+    if verbose: 
+        print("\n" + "="*41)
+        print(f"평가 결과 ({episode_num} 에피소드 평균)")
+        print("="*41)
 
     mean_reward = np.mean(episode_rewards)
     std_reward  = np.std(episode_rewards)
     mean_len    = np.mean(episode_lengths)
 
-    if verbose: print(f"Total Reward  : {mean_reward:.2f} ± {std_reward:.2f}")
-    if verbose: print(f"Episode Length: {mean_len:.1f}")
+    if verbose: 
+        print(f"Total Reward  : {mean_reward:.2f} ± {std_reward:.2f}")
+        print(f"Episode Length: {mean_len:.1f}")
 
     if all_metrics:
-        if verbose: print("-" * 41)
         df_metrics = pd.DataFrame(all_metrics)
 
-        summary = df_metrics.describe().loc[['mean', 'std']].T
-        if verbose: print(summary)
+        # 수: 평균, 표준편차
+        num_df = df_metrics.select_dtypes(include=[np.number])
+        if not num_df.empty and verbose:
+            print("-" * 41)
+            summary = num_df.describe().loc[['mean', 'std']].T
+            print(summary)
 
+        # 문자열(범주형): 종류별 비율
+        cat_df = df_metrics.select_dtypes(exclude=[np.number])
+        if not cat_df.empty and verbose:
+            print("-" * 41)
+            for col in cat_df.columns:
+                print(f"\n* {col}")
+                counts = df_metrics[col].value_counts()
+                ratios = df_metrics[col].value_counts(normalize=True)
+
+                for idx, val in counts.items():
+                    ratio = ratios[idx] * 100  #type:ignore
+                    print(f"   - {idx:<10}: {val:3d}회 ({ratio:5.1f}%)")
+
+        # CSV 저장
         if csv_path:
             df_metrics.to_csv(csv_path, index=False)
+            if verbose: 
+                print(f"\n💾 세부 결과 저장됨: {csv_path}")
             if verbose: print(f"\n세부 결과가 저장: {csv_path}")
     else:
         if verbose: print("\n⚠️ info['episode_metrics']가 발견되지 않음.")
