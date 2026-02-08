@@ -31,23 +31,23 @@ LOG_DIR = f"./logs/"
 CHECKPOINT_DIR = './checks/'
 
 
-class NoFeatureExtractor(BaseFeaturesExtractor):
+class NoFeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
-        super(NoFeatureExtractor, self).__init__(observation_space, features_dim=OBSERVATION_DIM)
+        super(NoFeaturesExtractor, self).__init__(observation_space, features_dim=OBSERVATION_DIM)
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         return observations
 
 
 
-class MLPFeatureExtractor(BaseFeaturesExtractor):
+class MLPFeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
         hidden_dim = 16
         flatten_output_dim = LOOKAHEAD_POINTS * hidden_dim
 
-        super(MLPFeatureExtractor, self).__init__(observation_space, features_dim=1 + flatten_output_dim)
+        super(MLPFeaturesExtractor, self).__init__(observation_space, features_dim=1 + flatten_output_dim)
 
         input_dim = LOOKAHEAD_POINTS * EACH_POINT_INFO_SIZE
 
@@ -68,13 +68,13 @@ class MLPFeatureExtractor(BaseFeaturesExtractor):
         return torch.cat((speed, output0), dim=1)
 
 
-class RNNFeatureExtractor(BaseFeaturesExtractor):
+class RNNFeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
         hidden_dim = 16
         flatten_output_dim = LOOKAHEAD_POINTS * hidden_dim
 
-        super(RNNFeatureExtractor, self).__init__(observation_space, features_dim=1 + flatten_output_dim)
+        super(RNNFeaturesExtractor, self).__init__(observation_space, features_dim=1 + flatten_output_dim)
 
         self.layer0 = nn.RNN(
             input_size=EACH_POINT_INFO_SIZE,
@@ -96,13 +96,13 @@ class RNNFeatureExtractor(BaseFeaturesExtractor):
         return torch.cat((speed, output0), dim=1)
 
 
-class CNNFeatureExtractor(BaseFeaturesExtractor):
+class CNNFeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
         hidden_dim = 16
         flatten_output_dim = LOOKAHEAD_POINTS * hidden_dim
 
-        super(CNNFeatureExtractor, self).__init__(observation_space, features_dim=1 + flatten_output_dim)
+        super(CNNFeaturesExtractor, self).__init__(observation_space, features_dim=1 + flatten_output_dim)
 
         self.cnn = nn.Sequential(
             nn.Conv1d(
@@ -178,7 +178,7 @@ def train_start(
     vec_env = make_vec_env(gen_env, n_envs=1, vec_env_cls=vec_env_cls, seed=seed)# n_envs: 병렬 환경 수
 
     policy_kwargs = dict(
-        features_extractor_class=NoFeatureExtractor,
+        features_extractor_class=NoFeaturesExtractor,
         features_extractor_kwargs=dict(),
         net_arch=dict(
             pi=[512, 512], # Actor
