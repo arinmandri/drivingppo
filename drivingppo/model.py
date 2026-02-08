@@ -1,5 +1,5 @@
 from typing import Callable, Literal
-import time, random
+import os, time, random
 from collections import defaultdict
 
 from .world import World
@@ -223,6 +223,7 @@ def train_start(
         total_timesteps=steps,
         callback=callbacks,
         tb_log_name=run_name,
+        log_interval=10,
         progress_bar=progress_bar,
     )
 
@@ -265,10 +266,15 @@ def train_resume(
         raise Exception(f'unknown vec_env: {vec_env}')
     vec_env = make_vec_env(gen_env, n_envs=4, vec_env_cls=vec_env_cls, seed=seed)
 
-    model_loading_path = model  if isinstance(model, str)  else 'temp_model-' + time.strftime('%y%m%d%H%M%m%S') + str(random.randint(0, 9999))
-
-    if isinstance(model, PPO):
-        model.save(CHECKPOINT_DIR+model_loading_path)
+    is_temp_file = False
+    if isinstance(model, str):
+        model_loading_path = model
+    elif isinstance(model, PPO):
+        model_loading_path = 'temp_model-' + time.strftime('%y%m%d%H%M%S') + str(random.randint(0, 9999))
+        is_temp_file = True
+        model.save(CHECKPOINT_DIR + model_loading_path)
+    else:
+        raise ValueError(f'model should be str or PPO not {type(model)}')
 
     print(f"=== 체크포인트 로드: {CHECKPOINT_DIR+model_loading_path} ===")
     model = PPO.load(
@@ -304,6 +310,7 @@ def train_resume(
         total_timesteps=steps,
         callback=callbacks,
         tb_log_name=run_name,
+        log_interval=10,
         progress_bar=progress_bar,
 
         reset_num_timesteps=False # 내부 타임스텝 카운터 초기화 여부
@@ -314,7 +321,13 @@ def train_resume(
         model.save(CHECKPOINT_DIR+save_path)
         print(f"=== 학습 완료 ({model.num_timesteps} 스텝): {CHECKPOINT_DIR+save_path} ===")
 
-    vec_env.close()  # 환경 정리
+    # 임시 파일 삭제 로직
+    if is_temp_file:
+        temp_file_path = CHECKPOINT_DIR + model_loading_path + ".zip"
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+
+    vec_env.close()
 
     return model
 
@@ -420,14 +433,8 @@ def evaluate(
         print("\n" + "="*41)
         print(f"평가 결과 ({episode_num} 에피소드 평균)")
         print("="*41)
-
-    mean_reward = np.mean(episode_rewards)
-    std_reward  = np.std(episode_rewards)
-    mean_len    = np.mean(episode_lengths)
-
-    if verbose: 
-        print(f"Total Reward  : {mean_reward:.2f} ± {std_reward:.2f}")
-        print(f"Episode Length: {mean_len:.1f}")
+        print(f"Total Reward  : {np.mean(episode_rewards):.2f} ± {np.std(episode_rewards):.2f}")
+        print(f"Episode Length: {np.mean(episode_lengths):.1f}")
 
     if all_metrics:
         df_metrics = pd.DataFrame(all_metrics)
