@@ -1,5 +1,5 @@
 from typing import Callable, Literal
-import time
+import time, random
 from collections import defaultdict
 
 from .world import World
@@ -162,6 +162,7 @@ def train_start(
         ent_coef=0.01,
         n_steps=1024,
         batch_size=256,
+        progress_bar=True,
         seed=42
 ) -> PPO:
     """
@@ -180,10 +181,11 @@ def train_start(
         features_extractor_class=NoFeatureExtractor,
         features_extractor_kwargs=dict(),
         net_arch=dict(
-            pi=[256, 256], # Actor
-            vf=[256, 256, 128]  # Critic
+            pi=[512, 512], # Actor
+            vf=[512, 512, 256]  # Critic
         )
     )
+    print('POLICY:', policy_kwargs)
 
     # PPO 모델
     model = PPO(
@@ -221,7 +223,7 @@ def train_start(
         total_timesteps=steps,
         callback=callbacks,
         tb_log_name=run_name,
-        progress_bar=True,
+        progress_bar=progress_bar,
     )
 
     # 최종 모델 저장
@@ -248,6 +250,7 @@ def train_resume(
         lr=1e-4,
         gamma=0.99,
         ent_coef=0.0,
+        progress_bar=True,
         seed=42
 ) -> PPO:
     """
@@ -262,23 +265,26 @@ def train_resume(
         raise Exception(f'unknown vec_env: {vec_env}')
     vec_env = make_vec_env(gen_env, n_envs=4, vec_env_cls=vec_env_cls, seed=seed)
 
-    # 모델 로드 (학습된 모델의 환경도 함께 로드)
-    if type(model) == str:
-        print(f"=== 체크포인트 로드: {CHECKPOINT_DIR+model} ===")
-        model = PPO.load(
-            path=CHECKPOINT_DIR+model,
-            env=vec_env,
-            verbose=1,
-            tensorboard_log=LOG_DIR  if tb_log  else None,
+    model_loading_path = model  if isinstance(model, str)  else 'temp_model-' + time.strftime('%y%m%d%H%M%m%S') + str(random.randint(0, 9999))
 
-            learning_rate=lr,
-            gamma=gamma,       # 미래 보상 할인율
-            ent_coef=ent_coef, # 새로운 환경 -> 새로운 시도 위해 엔트로피 높임.
-        )
+    if isinstance(model, PPO):
+        model.save(CHECKPOINT_DIR+model_loading_path)
+
+    print(f"=== 체크포인트 로드: {CHECKPOINT_DIR+model_loading_path} ===")
+    model = PPO.load(
+        path=CHECKPOINT_DIR+model_loading_path,
+        env=vec_env,
+        verbose=1,
+        tensorboard_log=LOG_DIR  if tb_log  else None,
+
+        learning_rate=lr,
+        gamma=gamma,
+        ent_coef=ent_coef,
+    )
     assert isinstance(model, PPO)
 
     # 콜백
-    callbacks:list[BaseCallback] = [TensorboardCallback()]  # 요소별 점수
+    callbacks:list[BaseCallback] = [TensorboardCallback()]  # 커스텀 매트릭
     if save_freq:
         # 모델 저장 콜백
         checkpoint_callback = CheckpointCallback(
@@ -298,7 +304,7 @@ def train_resume(
         total_timesteps=steps,
         callback=callbacks,
         tb_log_name=run_name,
-        progress_bar=True,
+        progress_bar=progress_bar,
 
         reset_num_timesteps=False # 내부 타임스텝 카운터 초기화 여부
     )
@@ -358,12 +364,12 @@ def run(
 
 
 def evaluate(
-        world_generator:Callable[[], World],
         model:PPO|str,
+        world_generator:Callable[[], World],
         episode_num=100,
         verbose:bool=True,
-        csv_path:str="results.csv",
-):
+        csv_path:str="",
+) -> dict:
     import numpy as np
     import pandas as pd
 
@@ -435,3 +441,5 @@ def evaluate(
         if verbose: print("\n⚠️ info['episode_metrics']가 발견되지 않음.")
 
     env.close()
+
+    return all_metrics
