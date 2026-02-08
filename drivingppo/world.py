@@ -440,8 +440,10 @@ class World:
         while True:
             if self.arrived:
                 break
+            # 일정 거리 이내에서 멀어지는 방향이 되는 순간
             distance = self.get_distance_to_wpoint()
-            if distance < self.near:
+            angle    = self.get_relative_angle_to_wpoint()
+            if distance < self.near and  math.cos(angle) < 0:
                 result_wpoint = True
                 self.next_wpoint()
             else:
