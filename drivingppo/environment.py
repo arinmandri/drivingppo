@@ -39,7 +39,7 @@ def get_state(world:World):
     return observation
 
 def speed_norm(speed):
-    return speed / SPD_MAX_STD  # 가능한 최대 속력은 19쯤이지만 실제로 7이 넘어가는 경우가 거의 없어서 최대 속력 10으로 치고 정규화.
+    return speed / SPD_MAX_STD
 
 def get_path_features(world:World) -> list[float]:
     """
@@ -289,20 +289,18 @@ class WorldEnv(gym.Env):
         else:
             # 진행 보상
 
-            reward_time = -0.5
+            reward_time = -0.1
 
             distance_d = distance - self.prev_d
-            stat_progress     = - distance_d * 1.2  if s_norm > 0 \
-                           else - s_norm * s_norm * 1.5  # 후진 진행 억제
-            stat_orientation  = + cos_nx * 0.03
-            reward_action_ws  = - ws**2 * 0.8
-            reward_action_ad  = - ad**2 * 0.8
-            total = reward_time + stat_progress + stat_orientation + reward_action_ws + reward_action_ad
-            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ang {stat_orientation:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} --> {total:+6.2f}')
+            stat_progress     = - distance_d * 0.15  if s_norm > 0 \
+                           else - self.wstep_per_control * s_norm * s_norm * 1.5  # 후진 진행 억제
+            reward_action_ws  = - ws**2 * 0.7
+            reward_action_ad  = - ad**2 * 0.9
+            total = reward_time + stat_progress + reward_action_ws + reward_action_ad
+            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} --> {total:+6.2f}')
 
             reward_step[2] += self.wstep_per_control * reward_time
-            reward_step[3] += self.wstep_per_control * stat_progress
-            reward_step[4] += self.wstep_per_control * stat_orientation
+            reward_step[3] += stat_progress
             reward_step[5] += self.wstep_per_control * reward_action_ws
             reward_step[6] += self.wstep_per_control * reward_action_ad
 
@@ -341,7 +339,6 @@ class WorldEnv(gym.Env):
                 'rewards/1.wPoint':      self.reward_totals[1]/wstep_count,
                 'rewards/2.time':        self.reward_totals[2]/wstep_count,
                 'rewards/3.progress':    self.reward_totals[3]/wstep_count,
-                'rewards/4.orientation': self.reward_totals[4]/wstep_count,
                 'rewards/5.ws':          self.reward_totals[5]/wstep_count,
                 'rewards/6.ad':          self.reward_totals[6]/wstep_count,
                 'metrics/ws_var':        ws_var,

@@ -198,14 +198,14 @@ class Car:
 
         # 후진 중: 브레이크
         if self.speed < 0:
-            decel_force = self.brake_power * weight
-            self.speed += decel_force * dt
+            f = self.brake_power * weight
+            self.speed += f * dt
             if self.speed > 0: self.speed = 0
 
         # 전진/정지 중: 가속
         elif self.speed >= 0:
-            force = self.engine_power * weight
-            self.speed += force * dt
+            f = self.engine_power * weight
+            self.speed += f * dt
 
     def control_s(self, weight, dt):
         """
@@ -217,14 +217,14 @@ class Car:
 
         # 전진 중: 브레이크
         if self.speed > 0:
-            decel_force = self.brake_power * weight
-            self.speed -= decel_force * dt
+            f = self.brake_power * weight
+            self.speed -= f * dt
             if self.speed < 0: self.speed = 0
 
         # 후진/정지 중: 가속
         elif self.speed <= 0:
-            force = self.engine_power * weight
-            self.speed -= force * dt
+            f = self.engine_power * weight
+            self.speed -= f * dt
 
     def control_stop(self, dt):
         """
