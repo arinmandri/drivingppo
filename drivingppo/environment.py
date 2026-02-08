@@ -245,6 +245,10 @@ class WorldEnv(gym.Env):
 
         reward_step = [0.0 for _ in range(7)]
 
+        if p.speed < 0:
+            # 후진진행 억제
+            self.time_limit += int(s_norm*700)
+
         # 목표점 도달
         if result_wpoint:
             if p.speed > 0:  # 후진 진행 억제
@@ -292,13 +296,12 @@ class WorldEnv(gym.Env):
         else:
             # 진행 보상
 
-            reward_time = -0.1
+            reward_time = -0.5
 
             distance_d = distance - self.prev_d
-            stat_progress     = - distance_d * 0.15  if s_norm > 0 \
-                           else - self.wstep_per_control * s_norm * s_norm * 1.5  # 후진 진행 억제
-            reward_action_ws  = - ws**2 * 0.7
-            reward_action_ad  = - ad**2 * 0.9
+            stat_progress     = - distance_d * 0.15  if s_norm > 0  else 0.0
+            reward_action_ws  = - ws**2 * 0.3
+            reward_action_ad  = - ad**2 * 0.15
             total = reward_time + stat_progress + reward_action_ws + reward_action_ad
             if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} --> {total:+6.2f}')
 
