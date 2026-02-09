@@ -269,7 +269,7 @@ class WorldEnv(gym.Env):
 
         # 전혀 엉뚱한 곳 감
         elif distance > w.far:
-            reward_step[2] += 100.0 * p.speed / SPD_MAX_STD * cos_nx
+            reward_step[2] += 100.0 * s_norm * cos_nx
             if self.render_mode == 'debug': print(f'LOST ({distance:.1f} > {w.far:.1f}) reward: {reward_step[2]:.2f}')
             ending = 'lost'
             truncated = True
