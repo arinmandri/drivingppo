@@ -35,9 +35,9 @@ CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 �
 벽 앞에서 가만히 있기를 택하지 않도록; 시간초과 벌점을 충돌만큼 부여.
 """
 
-def gen_0(): return generate_random_world_plain(map_h= 50, map_w= 50, num=1, wpoint_dist_min=6,   wpoint_dist_max=12, ang_init='p',    ang_lim=pi*0.5, spd_init=0)
-def gen_1(): return generate_random_world_plain(map_h=150, map_w=150, num=4, wpoint_dist_min=8,   wpoint_dist_max=20, ang_init='half', ang_lim=pi*1.0, spd_init=0)
-def gen_2(): return generate_random_world_plain(map_h=300, map_w=300, num=7, wpoint_dist_min=30,  wpoint_dist_max=45, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
+def gen_0(): return generate_random_world_plain(map_h= 50, map_w= 50, num=1,  wpoint_dist_min=6,   wpoint_dist_max=12, ang_init='half', ang_lim=pi*0.5, spd_init=0)
+def gen_1(): return generate_random_world_plain(map_h=150, map_w=150, num=4,  wpoint_dist_min=8,   wpoint_dist_max=20, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
+def gen_2(): return generate_random_world_plain(map_h=300, map_w=300, num=30, wpoint_dist_min=30,  wpoint_dist_max=45, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
 
 def generate_random_world_plain(
         map_w=MAP_W,
@@ -125,10 +125,7 @@ def generate_random_waypoints(
     for i in range(num):
 
         # 랜덤 거리
-        if i == 0:
-            distance = max_dist
-        else:
-            distance = np.random.uniform(min_dist, max_dist)
+        distance = np.random.uniform(min_dist, max_dist)
 
         # 새 좌표 계산
         x = last_x + math.sin(angle) * distance

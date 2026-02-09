@@ -252,7 +252,7 @@ class WorldEnv(gym.Env):
         # 목표점 도달
         if result_wpoint:
             if p.speed > 0:  # 후진 진행 억제
-                reward_step[1] += 50.0
+                reward_step[1] += 30.0 + 20.0 * cos_nx
 
             # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
             self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
@@ -260,7 +260,7 @@ class WorldEnv(gym.Env):
 
             self.prev_d = self.prev_d1
 
-            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_pv*rad_to_deg))}({cos_pv:.2f})')
+            if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_nx*rad_to_deg))}({cos_nx:.2f})')
 
             # 최종 목표 도달
             if w.arrived:
@@ -301,7 +301,7 @@ class WorldEnv(gym.Env):
             distance_d = distance - self.prev_d
             stat_progress     = - distance_d * 0.15  if s_norm > 0  else 0.0
             reward_action_ws  = - ws**2 * 0.3
-            reward_action_ad  = - ad**2 * 0.15
+            reward_action_ad  = - ad**2 * 0.5
             total = reward_time + stat_progress + reward_action_ws + reward_action_ad
             if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} --> {total:+6.2f}')
 
