@@ -104,25 +104,25 @@ class LidarSensor:
     def __init__(self,
                  map_data:arr,
                  max_range:int=5,
-                 num_rays:int=36,
+                 ray_num:int=36,
                  angle_start:float=0.0,
                  angle_end:float=pi2,
                  map_border:bool=True):
         """
         :param map_data: 2D 배열 (0: 빈칸, 1: 장애물)
         :param max_range: 라이다 최대 감지 거리
-        :param num_rays: 한 바퀴를 몇 등분 할 것인지
+        :param ray_num: 한 바퀴를 몇 등분 할 것인지.
         :angle_start: 스캔 시작 각도. 이 클래스에서 자동으로 정규화하지 않으니 값을 알아서 잘 넣을 것.
         :angle_end: 스캔 끝 각도. 이 클래스에서 자동으로 정규화하지 않으니 값을 알아서 잘 넣을 것.
         """
         if max_range <= 0: raise ValueError('라이다의 레이저 최대거리가 0 이하입니다.')
-        if num_rays  <= 2: raise ValueError('라이다의 레이저 개수가 2 이하입니다.')
+        if ray_num  <= 2: raise ValueError('라이다의 레이저 개수가 2 이하입니다.')
 
         self.map_data = map_data
         self.map_h = len(map_data)
         self.map_w = len(map_data[0])
         self.r = max_range
-        self.l = num_rays
+        self.l = ray_num
         self.map_border = map_border
 
         self.scan_start = angle_start
@@ -403,12 +403,14 @@ class World:
 
         self.init_config = config
 
+        ray_num = config.get('lidar_raynum', LIDAR_NUM)
+
         self.near:float = config.get('near',  2.5)  # 목표점과의 거리가 이보다 작으면 도착 판정
         self.far:float  = config.get('far',  12.0)  # 목표점과의 거리가 이보다 크면 길잃음 판정
         self.map_border = config.get('map_border', True)  # 맵 경계와 부딪힌다고 판정
         self.skip_past_waypoints:bool = config.get('skip_past_waypoints', False)  # 현재로부터 가장 가까운 waypoint로 건너뜀.
         self.skip_waypoints_num:int   = config.get('skip_waypoints_num', 10)   # skip_past_waypoints에서 최대 몇 개를 건너뛸지
-        self.lidar_real = config.get('lidar_real', True)
+        self.lidar_real = config.get('lidar_real', True)  if ray_num >= 1  else False
 
         self.t_acc = 0  # 에피소드 경과시간(XXX 현재 스스로 업데이트하지 않고 WorldController에서 받아오는데... 현재는 info 내보낼 때만 씀. 경과시간 관리를 WorldController 말고 여기서 하는 게 맞는지 고민중.)
 
@@ -444,7 +446,7 @@ class World:
         # 라이다
         self.lidar = LidarSensor(self.obstacle_map,
                                  max_range=config.get('lidar_range', LIDAR_RANGE),
-                                 num_rays=config.get('lidar_raynum', LIDAR_NUM),
+                                 ray_num=ray_num,
                                  angle_start=config.get('angle_start', LIDAR_START),
                                  angle_end=config.get('angle_end', LIDAR_END),
                                  map_border=self.map_border,
