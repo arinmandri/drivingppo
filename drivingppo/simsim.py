@@ -446,18 +446,19 @@ class WorldViewer:
                 self.fcanvas.add_line(0, i, world.MAP_W, i, fill=c['grid2'])
 
         # 라이다
-        for _, _, d, lx, _, lz, hit in world.lidar_points:
-            temp = max(0.0, min(1.0, d / world.lidar.r))
-            if hit: self.fcanvas.add_line(px, pz, lx, lz,
-                                   fill=f'#{255:02X}{int(255*temp):02X}{int(255*temp):02X}',
-                                   width=1)
-            self.fcanvas.add_circle(lx, lz, 1.5 if hit else 1,
-                            fill=c['lidar1'] if hit else c['lidar0'],
-                            outline='')  # 감지점
-        self.fcanvas.add_line(px, pz, world.lidar_points[0][3], world.lidar_points[0][5],
-                       fill='blue', width=1)
-        self.fcanvas.add_line(px, pz, world.lidar_points[-1][3], world.lidar_points[-1][5],
-                       fill='purple', width=1)
+        if world.lidar_real:
+            for _, _, d, lx, _, lz, hit in world.lidar_points:
+                temp = max(0.0, min(1.0, d / world.lidar.r))
+                if hit: self.fcanvas.add_line(px, pz, lx, lz,
+                                    fill=f'#{255:02X}{int(255*temp):02X}{int(255*temp):02X}',
+                                    width=1)
+                self.fcanvas.add_circle(lx, lz, 1.5 if hit else 1,
+                                fill=c['lidar1'] if hit else c['lidar0'],
+                                outline='')  # 감지점
+            self.fcanvas.add_line(px, pz, world.lidar_points[0][3], world.lidar_points[0][5],
+                        fill='blue', width=1)
+            self.fcanvas.add_line(px, pz, world.lidar_points[-1][3], world.lidar_points[-1][5],
+                        fill='purple', width=1)
 
         # 목표점
         waypoints = world.waypoints

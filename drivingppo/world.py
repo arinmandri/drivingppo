@@ -103,11 +103,11 @@ def create_empty_map(w, h) -> arr:
 class LidarSensor:
     def __init__(self,
                  map_data:arr,
-                 max_range:int=5,
-                 ray_num:int=36,
-                 angle_start:float=0.0,
-                 angle_end:float=pi2,
-                 map_border:bool=True):
+                 max_range:float,
+                 ray_num:int,
+                 angle_start:float,
+                 angle_end:float,
+                 map_border:bool):
         """
         :param map_data: 2D 배열 (0: 빈칸, 1: 장애물)
         :param max_range: 라이다 최대 감지 거리
@@ -116,7 +116,7 @@ class LidarSensor:
         :angle_end: 스캔 끝 각도. 이 클래스에서 자동으로 정규화하지 않으니 값을 알아서 잘 넣을 것.
         """
         if max_range <= 0: raise ValueError('라이다의 레이저 최대거리가 0 이하입니다.')
-        if ray_num  <= 2: raise ValueError('라이다의 레이저 개수가 2 이하입니다.')
+        if ray_num  < 1: raise ValueError('라이다의 레이저 개수가 1 미만입니다.')
 
         self.map_data = map_data
         self.map_h = len(map_data)
@@ -129,7 +129,7 @@ class LidarSensor:
         self.scan_end   = angle_end
         self.total_span = self.scan_end - self.scan_start
         if self.total_span < 0: self.total_span += pi2
-        self.angle_step = self.total_span / (self.l-1)
+        self.angle_step = self.total_span / (self.l-1)  if self.l > 1  else 0.0
 
     def scan(self, x_start, z_start, angle_front) -> list[tuple[float, float, float, float, float, float, bool]]:
         """
@@ -210,6 +210,36 @@ class LidarSensor:
 
         return results
 
+class DummyLidarSensor:
+    """
+    라이다 센서 끄기(기능 없음, 형식만 맞춤.)
+    """
+    def __init__(self,
+                 max_range:float,
+                 ray_num:int,
+                 angle_start:float,
+                 angle_end:float,
+                 map_border:bool):
+        if ray_num < 0: raise ValueError('라이다의 레이저 개수가 0 미만입니다.')
+        print('dummy lidar sensor')
+
+        self.r = max_range
+        self.l = ray_num
+        self.map_border = map_border
+
+        self.scan_start = angle_start
+        self.scan_end   = angle_end
+        self.total_span = self.scan_end - self.scan_start
+        if self.total_span < 0: self.total_span += pi2
+        self.angle_step = self.total_span / (self.l-1)
+
+    def scan(self, x_start, z_start, angle_front) -> list[tuple[float, float, float, float, float, float, bool]]:
+        return [(self.scan_start + i * self.angle_step,
+                0.0,
+                self.r,
+                x_start, 0.0, z_start,
+                False
+                ) for i in range(self.l)]
 
 
 class Car:
@@ -444,13 +474,22 @@ class World:
         self.trace_max = 800
 
         # 라이다
-        self.lidar = LidarSensor(self.obstacle_map,
-                                 max_range=config.get('lidar_range', LIDAR_RANGE),
-                                 ray_num=ray_num,
-                                 angle_start=config.get('angle_start', LIDAR_START),
-                                 angle_end=config.get('angle_end', LIDAR_END),
-                                 map_border=self.map_border,
-                                 )
+        if self.lidar_real:
+            self.lidar = LidarSensor(self.obstacle_map,
+                                     max_range=config.get('lidar_range', LIDAR_RANGE),
+                                     ray_num=ray_num,
+                                     angle_start=config.get('angle_start', LIDAR_START),
+                                     angle_end=config.get('angle_end', LIDAR_END),
+                                     map_border=self.map_border,
+                                     )
+        else:
+            self.lidar = DummyLidarSensor(
+                                     max_range=config.get('lidar_range', LIDAR_RANGE),
+                                     ray_num=ray_num,
+                                     angle_start=config.get('angle_start', LIDAR_START),
+                                     angle_end=config.get('angle_end', LIDAR_END),
+                                     map_border=self.map_border,
+                                     )
         self.lidar_scan()
 
         # 목표점
@@ -545,15 +584,7 @@ class World:
         # 라이다 계산이 시간이 제일 많이 걸리니까 장애물 없는 학습단계에서는 라이다 계산을 생략하려고 조건문 넣음.
         p = self.player
         l = self.lidar
-        if self.lidar_real:
-            self.lidar_points = l.scan(p.x, p.z, p.angle_x)
-        else:
-            self.lidar_points = [(l.scan_start + p.angle_x + i * l.angle_step,
-                                  0.0,
-                                  l.r,
-                                  p.x, 0.0, p.z,
-                                  False
-                                  ) for i in range(l.l)]
+        self.lidar_points = l.scan(p.x, p.z, p.angle_x)
         # print([f'{a:.1f}' for a, _, _, _, _, _, _ in self.lidar_points])
         # [(angle, vertical_angle, distance, x,y,z, isDetected), ...]  Tank Challenge가 생성하는 csv 순서대로
 
@@ -677,7 +708,10 @@ class World:
         가장 가까운 라이다 거리
         모두 hit=False이면 그냥 큰 수
         """
-        return min([distance if h else 99999.9 for _,_, distance, _,_,_, h in self.lidar_points])
+        if self.lidar_real:
+            return min([distance if h else 99999.9 for _,_, distance, _,_,_, h in self.lidar_points])
+        else:
+            return 99999.9
 
     @property
     def obs_nearest_angle(self) -> float:
@@ -687,11 +721,12 @@ class World:
         """
         result = -pi
         d = 99999.9
-        for angle,_, distance, _,_,_, h in self.lidar_points:
-            if not h: continue
-            if distance <= d:
-                d = distance
-                result = angle
+        if self.lidar_real:
+            for angle,_, distance, _,_,_, h in self.lidar_points:
+                if not h: continue
+                if distance <= d:
+                    d = distance
+                    result = angle
         return result
 
     def __ind_rel_to_abs(self, index_rel:int):
