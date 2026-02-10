@@ -104,14 +104,14 @@ class FieldCanvasPainter:
     def __reset(self):
         self.__tasks = []
         self.__params = []
-        self.__points = np.zeros((0, 2))
+        self.__points = []
         self.__i = 0
 
     def __pushPoints(self, points:list[tuple[float, float]]):
-        self.__points = np.concatenate((self.__points, np.array(points)), axis=0)
+        self.__points.extend(points)
 
     def __popPoints(self, n) -> arr:
-        points = self.__points[self.__i:n+self.__i]
+        points = self.__points_np[self.__i:n+self.__i]
         self.__i += n
         return points
 
@@ -181,14 +181,16 @@ class FieldCanvasPainter:
 
     def __transform_points(self, p:Car):
         # 맵 상의 점을 화면상의 위치로 변환
+        points = np.array(self.__points)
+
         if self.mode == 0:
-            self.__points[:, 1] = self.H - self.__points[:, 1]  # 화면의 y와 우리의 z축 방향 반대
-            self.__points *= self.scale
+            points[:, 1] = self.H - points[:, 1]  # 화면의 y와 우리의 z축 방향 반대
+            points *= self.scale
 
         if self.mode == 1:
             # 플레이어 위치 중심
-            self.__points[:, 0] =   (self.__points[:, 0] - p.x)*self.scale2 + self.cW/2
-            self.__points[:, 1] = - (self.__points[:, 1] - p.z)*self.scale2 + self.cH/2
+            points[:, 0] =   (points[:, 0] - p.x)*self.scale2 + self.cW/2
+            points[:, 1] = - (points[:, 1] - p.z)*self.scale2 + self.cH/2
         
         elif self.mode == 2:
             # 입체감
@@ -196,19 +198,19 @@ class FieldCanvasPainter:
             focal_length  = 30
             pitch = -45 * deg_to_rad
 
-            self.__points[:, 0] = self.__points[:, 0] - p.x
-            self.__points[:, 1] = self.__points[:, 1] - p.z
+            points[:, 0] = points[:, 0] - p.x
+            points[:, 1] = points[:, 1] - p.z
             c = np.cos(p.angle_x)
             s = np.sin(p.angle_x)
             R = np.array([
                 [c, s],
                 [-s,  c],
             ])
-            self.__points = self.__points @ R
+            points = points @ R
 
             y_rel = -camera_height
-            x_yaw = self.__points[:, 0]
-            z_yaw = self.__points[:, 1] + 15
+            x_yaw = points[:, 0]
+            z_yaw = points[:, 1] + 15
             c = np.cos(pitch)
             s = np.sin(pitch)
             y_final = y_rel * c - z_yaw * s
@@ -219,10 +221,12 @@ class FieldCanvasPainter:
             screen_x = x_yaw   * factor
             screen_y = y_final * factor
             
-            self.__points = np.column_stack((screen_x, screen_y))
-            self.__points *= self.scale2
-            self.__points[:, 0] =   self.__points[:, 0] + self.cW/2
-            self.__points[:, 1] = - self.__points[:, 1] + self.cH/2
+            points = np.column_stack((screen_x, screen_y))
+            points *= self.scale2
+            points[:, 0] =   points[:, 0] + self.cW/2
+            points[:, 1] = - points[:, 1] + self.cH/2
+
+        self.__points_np = points
 
 
     def draw(self, player:Car):
@@ -396,17 +400,13 @@ class WorldViewer:
             min_z = 0
             max_z = world.MAP_H
         else:
-            view_range = 25 # 시야 범위
+            view_range = 50 # 시야 범위
             min_x = max(0, int(px) - view_range)
             max_x = min(world.MAP_W, int(px) + view_range)
             min_z = max(0, int(pz) - view_range)
             max_z = min(world.MAP_H, int(pz) + view_range)
         sub_map = world.obstacle_map[min_z:max_z, min_x:max_x]
         obs_z, obs_x = np.where(sub_map == 1)
-
-        # 3. 그리기
-        # 가져온 인덱스는 잘라낸 맵 기준이므로, 원래 좌표(min_x, min_z)를 더해줍니다.
-        # zip을 사용하여 파이썬 레벨의 루프 횟수를 최소화합니다.
         for z, x in zip(obs_z, obs_x):
              self.fcanvas.add_cell_filling(x + min_x, z + min_z, c['obstacle'])
 
