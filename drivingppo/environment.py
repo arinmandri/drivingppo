@@ -14,6 +14,12 @@ from .common import (
     OBSERVATION_IND_WPOINT_0,
     OBSERVATION_IND_WPOINT_1,
     OBSERVATION_IND_WPOINT_2,
+    LIDAR_START,
+    LIDAR_END,
+    LIDAR_NUM,
+    LIDAR_RANGE,
+    OBSERVATION_IND_LIDAR_S,
+    OBSERVATION_IND_LIDAR_E,
     OBSERVATION_DIM,
 )
 
@@ -21,6 +27,8 @@ import numpy as np
 from numpy import ndarray as Arr
 import gymnasium as gym
 from gymnasium import spaces
+
+METRIC_SIZE = 9
 
 
 def get_state(world:World):
@@ -33,8 +41,12 @@ def get_state(world:World):
     # 경로 정보
     path_data = get_path_features(world)
 
+    # 라이다
+    lidar_data = [distance_score_near(distance) if h else 0.0
+                  for _,_, distance, _,_,_, h in world.lidar_points]
+
     # 모든 벡터를 합쳐 고정된 크기의 배열로 만든다.
-    observation = np.array([s_norm] + path_data, dtype=np.float32)
+    observation = np.array([s_norm] + path_data + lidar_data, dtype=np.float32)
 
     return observation
 
@@ -105,6 +117,7 @@ def observation_str(observation):
            f' [1] a:{obs_wpoint_afp_1*pi*rad_to_deg:+5.2f} d:{obs_wpoint_dist_1:.2f}'\
            f' [2] a:{obs_wpoint_afp_2*pi*rad_to_deg:+5.2f} d:{obs_wpoint_dist_2:.2f}'
 
+
 def _distance_score_near(x:float) -> float:
     d = x + 10.0
     x = 100./d/d
@@ -113,8 +126,10 @@ def _distance_score_near(x:float) -> float:
     else:
         return 1.0
 
+distance_score_near_base = _distance_score_near(LIDAR_RANGE)
+
 def distance_score_near(x:float) -> float:
-    return _distance_score_near(x)
+    return max(0, _distance_score_near(x) - distance_score_near_base)
 
 def distance_score_far(x:float) -> float:
     return x / 30.0
@@ -241,16 +256,26 @@ class WorldEnv(gym.Env):
         ang_nx  = w.get_relative_angle_to_wpoint()
         cos_nx  = math.cos(ang_nx)
 
+        ld_max_0 = observation0[OBSERVATION_IND_LIDAR_S:OBSERVATION_IND_LIDAR_E].max()
+        ld_max_1 = observation1[OBSERVATION_IND_LIDAR_S:OBSERVATION_IND_LIDAR_E].max()
+        ld_max_d = ld_max_1 - ld_max_0
+
         self.speed_history.append(p.speed)
 
-        reward_step = [0.0 for _ in range(7)]
+        reward_step = [0.0 for _ in range(METRIC_SIZE)]
 
         if p.speed < 0:
             # 후진진행 억제
             self.time_limit += int(s_norm*700)
 
+        # 충돌
+        if result_collision:
+            reward_step[2] += -150.0
+            ending = 'collision'
+            terminated = True
+
         # 목표점 도달
-        if result_wpoint:
+        elif result_wpoint:
             if p.speed > 0:  # 후진 진행 억제
                 reward_step[1] += 30.0 + 20.0 * cos_nx
 
@@ -290,6 +315,7 @@ class WorldEnv(gym.Env):
                 '✅' if ending == 'arrived' else \
                 '▶️' if ending == 'timeout' else \
                 '👻' if ending == 'lost' else \
+                '💥' if ending == 'collision' else \
                 '⏰' if ending == 'timeover' else '??'
             self.print_log(f'결과{icon} 도착: {w.waypoint_idx:3d}/{w.path_len:3d} | 시간: {int(w.t_acc/1000):3d}/{int(self.time_limit/1000):3d}/{int(self.max_time/1000):3d} 초 ({int(w.t_acc/self.max_time*100):3d}%) | 위치: {int(p.x):4d}, {int(p.z):4d} ({int(p.x/self.world.MAP_W*100):3d}%, {int(p.z/self.world.MAP_H*100):3d}%)')
 
@@ -302,19 +328,23 @@ class WorldEnv(gym.Env):
             stat_progress     = - distance_d * 0.15  if s_norm > 0  else 0.0
             reward_action_ws  = - ws**2 * 0.3
             reward_action_ad  = - ad**2 * 0.5
-            total = reward_time + stat_progress + reward_action_ws + reward_action_ad
-            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} --> {total:+6.2f}')
+            danger            = - ld_max_1 * 0.06
+            danger_d          = - ld_max_d * 8.0
+            total = reward_time + stat_progress + reward_action_ws + reward_action_ad + danger + danger_d
+            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} | danger {danger:+5.2f}~{danger_d:+5.2f} --> {total:+6.2f}')
 
-            reward_step[2] += self.wstep_per_control * reward_time
-            reward_step[3] += stat_progress
+            reward_step[3] += self.wstep_per_control * reward_time
+            reward_step[4] += stat_progress
             reward_step[5] += self.wstep_per_control * reward_action_ws
             reward_step[6] += self.wstep_per_control * reward_action_ad
+            reward_step[7] += self.wstep_per_control * danger
+            reward_step[8] += self.wstep_per_control * danger_d
 
         info = {'current_time': w.t_acc / 1000.0}
 
         # 점수 합
         reward_step[0] = sum(reward_step[1:])
-        for i in range(7):
+        for i in range(METRIC_SIZE):
             self.reward_totals[i] += reward_step[i]
 
         if truncated or terminated:
@@ -343,10 +373,13 @@ class WorldEnv(gym.Env):
                 'ending/wstep': self.estep_count * self.wstep_per_control,
                 'rewards/0.total':       self.reward_totals[0]/wstep_count,
                 'rewards/1.wPoint':      self.reward_totals[1]/wstep_count,
-                'rewards/2.time':        self.reward_totals[2]/wstep_count,
-                'rewards/3.progress':    self.reward_totals[3]/wstep_count,
+                'rewards/2.fail':        self.reward_totals[2]/wstep_count,
+                'rewards/3.time':        self.reward_totals[3]/wstep_count,
+                'rewards/4.progress':    self.reward_totals[4]/wstep_count,
                 'rewards/5.ws':          self.reward_totals[5]/wstep_count,
                 'rewards/6.ad':          self.reward_totals[6]/wstep_count,
+                'rewards/7.danger':      self.reward_totals[7]/wstep_count,
+                'rewards/8.danger_d':    self.reward_totals[8]/wstep_count,
                 'metrics/ws_var':        ws_var,
                 'metrics/ad_var':        ad_var,
                 'metrics/speed_mean':    speed_mean,
@@ -372,7 +405,7 @@ class WorldEnv(gym.Env):
         self.world = w
 
         self.estep_count = 0
-        self.reward_totals = [0.0 for _ in range(7)]
+        self.reward_totals = [0.0 for _ in range(METRIC_SIZE)]
         self.time_limit = self.time_gain_limit  # 제한시간. 목표점 도달시마다 추가 획득.
         self.action_history = []  # 액션 기록
         self.speed_history = []
@@ -406,11 +439,14 @@ class WorldEnv(gym.Env):
         wstep_count = self.estep_count * self.wstep_per_control
         if wstep_count:
             self.print_log(f'총점 {int(self.reward_totals[0]):5d} '
-                           f'| wpoint {self.reward_totals[1]:6.1f}({ int(self.reward_totals[1]/wstep_count*100)}%) '
-                           f'| time {  self.reward_totals[2]:+7.2f}({int(self.reward_totals[2]/wstep_count*100)}%) '
-                           f'| prog {  self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/wstep_count*100)}%) '
-                           f'| ws {    self.reward_totals[5]:+7.2f}({int(self.reward_totals[5]/wstep_count*100)}%) '
-                           f'| ad {    self.reward_totals[6]:+7.2f}({int(self.reward_totals[6]/wstep_count*100)}%)')
+                           f'| wpoint {  self.reward_totals[1]:6.1f}({ int(self.reward_totals[1]/wstep_count*100)}%) '
+                           f'| fail {    self.reward_totals[2]:6.1f}({ int(self.reward_totals[2]/wstep_count*100)}%) '
+                           f'| time {    self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/wstep_count*100)}%) '
+                           f'| prog {    self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/wstep_count*100)}%) '
+                           f'| ws {      self.reward_totals[5]:+7.2f}({int(self.reward_totals[5]/wstep_count*100)}%) '
+                           f'| ad {      self.reward_totals[6]:+7.2f}({int(self.reward_totals[6]/wstep_count*100)}%) '
+                           f'| danger {  self.reward_totals[7]:+7.2f}({int(self.reward_totals[7]/wstep_count*100)}%) '
+                           f'| danger_d {self.reward_totals[8]:+7.2f}({int(self.reward_totals[8]/wstep_count*100)}%)')
 
     def print_log(
             self,

@@ -8,7 +8,7 @@ import math
 import numpy as np
 from numpy import ndarray as arr
 
-from .common import MAP_W as MAP_DEFAULT_W, MAP_H as MAP_DEFAULT_H, SPD_MAX_STD
+from .common import MAP_W as MAP_DEFAULT_W, MAP_H as MAP_DEFAULT_H, LIDAR_NUM, LIDAR_RANGE, LIDAR_START, LIDAR_END
 
 idseq = 0
 
@@ -54,7 +54,11 @@ def linspace(a, b, num):
 
 
 # 장애물맵 불러오기 0or1 [w][h]
-def load_obstacle_map(map_file: str) -> tuple[arr, int, int]:
+def load_obstacle_map(map_file: str) -> tuple[arr, int, int] | None:
+    """
+    장애물맵 파일은 0이나 1로 된 텍스트 파일 (쉼표나 공백 X)
+    파일 없으면 None 반환
+    """
     map_data = []
 
     try:
@@ -88,12 +92,123 @@ def load_obstacle_map(map_file: str) -> tuple[arr, int, int]:
 
     except FileNotFoundError as e:
         print(f"ERROR: 맵 파일({map_file})이 없음.", e)
-        raise e
+        return None
 
 def create_empty_map(w, h) -> arr:
     # 맵 0으로 초기화
     return np.zeros((h, w), dtype=int)
 
+
+
+class LidarSensor:
+    def __init__(self,
+                 map_data:arr,
+                 max_range:int=5,
+                 num_rays:int=36,
+                 angle_start:float=0.0,
+                 angle_end:float=pi2,
+                 map_border:bool=True):
+        """
+        :param map_data: 2D 배열 (0: 빈칸, 1: 장애물)
+        :param max_range: 라이다 최대 감지 거리
+        :param num_rays: 한 바퀴를 몇 등분 할 것인지
+        :angle_start: 스캔 시작 각도. 이 클래스에서 자동으로 정규화하지 않으니 값을 알아서 잘 넣을 것.
+        :angle_end: 스캔 끝 각도. 이 클래스에서 자동으로 정규화하지 않으니 값을 알아서 잘 넣을 것.
+        """
+        if max_range <= 0: raise ValueError('라이다의 레이저 최대거리가 0 이하입니다.')
+        if num_rays  <= 2: raise ValueError('라이다의 레이저 개수가 2 이하입니다.')
+
+        self.map_data = map_data
+        self.map_h = len(map_data)
+        self.map_w = len(map_data[0])
+        self.r = max_range
+        self.l = num_rays
+        self.map_border = map_border
+
+        self.scan_start = angle_start
+        self.scan_end   = angle_end
+        self.total_span = self.scan_end - self.scan_start
+        if self.total_span < 0: self.total_span += pi2
+        self.angle_step = self.total_span / (self.l-1)
+
+    def scan(self, x_start, z_start, angle_front) -> list[tuple[float, float, float, float, float, float, bool]]:
+        """
+        현재 차량 위치에서 360도 스캔.
+        DDA(Digital Differential Analyzer) Raycasting 개념을 활용한 최적화된 스캔: 그리드 경계만 검사하여 연산 속도를 대폭 향상시킵니다.
+
+        :return: [(angle_front, vertical_angle, distance, x,y,z, isDetected), ...]  Tank Challenge가 내보내는 CSV와 같은 순서대로.
+        """
+        results = []
+
+        ray_angle_start = self.scan_start + angle_front
+
+        for i in range(self.l):
+            ray_angle = ray_angle_start + i * self.angle_step  # 절대각도
+
+            sin_a = math.sin(ray_angle)
+            cos_a = math.cos(ray_angle)
+
+            # --- DDA 초기화 ---
+
+            # 현재 그리드 셀 (정수 좌표)
+            x = int(x_start)
+            z = int(z_start)
+
+            # 레이의 방향 (양수 또는 음수)
+            step_x = 1 if sin_a >= 0 else -1
+            step_z = 1 if cos_a >= 0 else -1
+
+            # X/Z 방향으로 1단위 이동하는데 필요한 레이의 길이 (최대값)
+            max_dist_x = abs(1.0 / (sin_a + 1e-9))
+            max_dist_z = abs(1.0 / (cos_a + 1e-9))
+
+            # 현재 위치에서 다음 그리드 경계까지의 레이 길이
+            # 다음 경계까지 남은 거리 (Fractional part)
+            if sin_a >= 0: dist_x = (x - x_start + 1.0) * max_dist_x
+            else:          dist_x = (x_start - x      ) * max_dist_x
+            if cos_a >= 0: dist_z = (z - z_start + 1.0) * max_dist_z
+            else:          dist_z = (z_start - z      ) * max_dist_z
+
+            hit = False
+            distance = 0.0
+
+            # --- DDA 주 루프 ---
+            while distance <= self.r:
+                if dist_x < dist_z: # X 경계에 먼저 도달
+                    distance = dist_x
+                    dist_x += max_dist_x
+                    x += step_x
+
+                else: # Z 경계에 먼저 도달
+                    distance = dist_z
+                    dist_z += max_dist_z
+                    z += step_z
+
+                # 맵 범위 검사
+                if not (0 <= x < self.map_w and 0 <= z < self.map_h):
+                    if self.map_border:  # 맵 밖을 충돌로 취급
+                        hit = True
+                    else:
+                        hit = False  # 맵 경계에 충돌하지 않음
+                        distance = self.r
+                    break
+
+                # 장애물 충돌 검사
+                if self.map_data[z, x] == 1:
+                    hit = True
+                    break
+
+            # 3. 결과 계산
+            distance = min(distance, self.r)  # 최대 거리를 초과하지 않도록 클리핑
+
+            # 충돌 지점의 절대 좌표 계산
+            final_x = x_start + sin_a * distance
+            final_z = z_start + cos_a * distance
+
+            # Tank Challenge의 CSV 형식 (angle, vertical_angle, distance, x, y, z, isDetected)
+            results.append((ray_angle - angle_front, 0.0, distance, final_x, 0.0, final_z, hit))
+
+        return results
 
 
 
@@ -293,6 +408,7 @@ class World:
         self.map_border = config.get('map_border', True)  # 맵 경계와 부딪힌다고 판정
         self.skip_past_waypoints:bool = config.get('skip_past_waypoints', False)  # 현재로부터 가장 가까운 waypoint로 건너뜀.
         self.skip_waypoints_num:int   = config.get('skip_waypoints_num', 10)   # skip_past_waypoints에서 최대 몇 개를 건너뛸지
+        self.lidar_real = config.get('lidar_real', True)
 
         self.t_acc = 0  # 에피소드 경과시간(XXX 현재 스스로 업데이트하지 않고 WorldController에서 받아오는데... 현재는 info 내보낼 때만 씀. 경과시간 관리를 WorldController 말고 여기서 하는 게 맞는지 고민중.)
 
@@ -324,6 +440,16 @@ class World:
         self.trace = [(self.player.x, self.player.z, 0.0)]
         self.trace_count = 0
         self.trace_max = 800
+
+        # 라이다
+        self.lidar = LidarSensor(self.obstacle_map,
+                                 max_range=config.get('lidar_range', LIDAR_RANGE),
+                                 num_rays=config.get('lidar_raynum', LIDAR_NUM),
+                                 angle_start=config.get('angle_start', LIDAR_START),
+                                 angle_end=config.get('angle_end', LIDAR_END),
+                                 map_border=self.map_border,
+                                 )
+        self.lidar_scan()
 
         # 목표점
         self.__waypoints:list[tuple[float, float]] = waypoints
@@ -413,6 +539,22 @@ class World:
         self.ad = max(min(ad, 1.0), -1.0)
         self.stop = stop
 
+    def lidar_scan(self):
+        # 라이다 계산이 시간이 제일 많이 걸리니까 장애물 없는 학습단계에서는 라이다 계산을 생략하려고 조건문 넣음.
+        p = self.player
+        l = self.lidar
+        if self.lidar_real:
+            self.lidar_points = l.scan(p.x, p.z, p.angle_x)
+        else:
+            self.lidar_points = [(l.scan_start + p.angle_x + i * l.angle_step,
+                                  0.0,
+                                  l.r,
+                                  p.x, 0.0, p.z,
+                                  False
+                                  ) for i in range(l.l)]
+        # print([f'{a:.1f}' for a, _, _, _, _, _, _ in self.lidar_points])
+        # [(angle, vertical_angle, distance, x,y,z, isDetected), ...]  Tank Challenge가 생성하는 csv 순서대로
+
     def step(self, dt, callback:Callable|None=None) -> tuple[bool, bool, bool]:
         """
         Return: 플레이어 움직임?, 충돌?, 목표점도달?
@@ -434,6 +576,8 @@ class World:
                 self.trace = self.trace[-self.trace_max:]
 
         result_collision = self.check_collision()
+
+        self.lidar_scan()
 
         # 목표점 도달 판정
         result_wpoint = False
@@ -523,6 +667,30 @@ class World:
         rel_ang = (rel_ang + pi) % pi2 - pi
 
         return rel_ang
+
+
+    @property
+    def obs_nearest_distance(self) -> float:
+        """
+        가장 가까운 라이다 거리
+        모두 hit=False이면 그냥 큰 수
+        """
+        return min([distance if h else 99999.9 for _,_, distance, _,_,_, h in self.lidar_points])
+
+    @property
+    def obs_nearest_angle(self) -> float:
+        """
+        가장 가까운 라이다 각도
+        모두 hit=False이면 -pi
+        """
+        result = -pi
+        d = 99999.9
+        for angle,_, distance, _,_,_, h in self.lidar_points:
+            if not h: continue
+            if distance <= d:
+                d = distance
+                result = angle
+        return result
 
     def __ind_rel_to_abs(self, index_rel:int):
         index = self.__waypoint_idx + index_rel
