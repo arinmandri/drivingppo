@@ -292,6 +292,7 @@ def train_resume(
         model:PPO|str,
         gen_env: Callable[[], WorldEnv],
         steps: int,
+        reset_num_timesteps=False,
         save_path:str|None=None,
         save_freq:int=0,
         tb_log:bool=False,
@@ -364,7 +365,7 @@ def train_resume(
         log_interval=10,
         progress_bar=progress_bar,
 
-        reset_num_timesteps=False # 내부 타임스텝 카운터 초기화 여부
+        reset_num_timesteps=reset_num_timesteps # 내부 타임스텝 카운터 초기화 여부
     )
 
     # 최종 모델 저장
