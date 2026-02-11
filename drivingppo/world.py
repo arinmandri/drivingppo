@@ -221,7 +221,6 @@ class DummyLidarSensor:
                  angle_end:float,
                  map_border:bool):
         if ray_num < 0: raise ValueError('라이다의 레이저 개수가 0 미만입니다.')
-        print('dummy lidar sensor')
 
         self.r = max_range
         self.l = ray_num
@@ -581,7 +580,6 @@ class World:
         self.stop = stop
 
     def lidar_scan(self):
-        # 라이다 계산이 시간이 제일 많이 걸리니까 장애물 없는 학습단계에서는 라이다 계산을 생략하려고 조건문 넣음.
         p = self.player
         l = self.lidar
         self.lidar_points = l.scan(p.x, p.z, p.angle_x)
