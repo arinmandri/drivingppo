@@ -221,7 +221,6 @@ class DummyLidarSensor:
                  angle_end:float,
                  map_border:bool):
         if ray_num < 0: raise ValueError('라이다의 레이저 개수가 0 미만입니다.')
-        print('dummy lidar sensor')
 
         self.r = max_range
         self.l = ray_num

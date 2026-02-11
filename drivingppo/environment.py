@@ -256,8 +256,8 @@ class WorldEnv(gym.Env):
         ang_nx  = w.get_relative_angle_to_wpoint()
         cos_nx  = math.cos(ang_nx)
 
-        ld_max_0 = observation0[OBSERVATION_IND_LIDAR_S:OBSERVATION_IND_LIDAR_E].max()
-        ld_max_1 = observation1[OBSERVATION_IND_LIDAR_S:OBSERVATION_IND_LIDAR_E].max()
+        ld_max_0 = observation0[OBSERVATION_IND_LIDAR_S:OBSERVATION_IND_LIDAR_E].max()  if LIDAR_NUM  else 0.0
+        ld_max_1 = observation1[OBSERVATION_IND_LIDAR_S:OBSERVATION_IND_LIDAR_E].max()  if LIDAR_NUM  else 0.0
         ld_max_d = ld_max_1 - ld_max_0
 
         self.speed_history.append(p.speed)
