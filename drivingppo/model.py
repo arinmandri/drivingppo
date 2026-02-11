@@ -194,7 +194,7 @@ class TensorboardCallback(BaseCallback):
 
 def train_start(
         gen_env:Callable[[], WorldEnv],
-        steps:int,
+        steps:int=0,  # 0: 학습 없이 생성만 된 모델 반환.
         save_path:str|None=None,
         save_freq:int=0,
         tb_log:bool=False,
@@ -249,6 +249,13 @@ def train_start(
 
         device="auto"  # GPU 사용 설정
     )
+
+    if steps <= 0:
+        # 학습 없이 모델 바로 반환
+        print("=== PPO 모델 생성 ===")
+        if save_path:
+            model.save(CHECKPOINT_DIR+save_path)
+        return model
 
     # 콜백
     callbacks:list[BaseCallback] = [TensorboardCallback()]  # 요소별 점수
