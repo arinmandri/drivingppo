@@ -498,6 +498,7 @@ def evaluate(
         if not num_df.empty and verbose:
             print("-" * 41)
             summary = num_df.describe().loc[['mean', 'std']].T
+            summary['mean'] = summary['mean'].map('{:.4f}'.format)  # 지수표기 안 함.
             print(summary)
 
         # 문자열(범주형): 종류별 비율

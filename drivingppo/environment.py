@@ -372,22 +372,23 @@ class WorldEnv(gym.Env):
                 speed_var = 0.0
                 speed_mean = 0.0
 
-            wstep_count = self.estep_count * self.action_repeat
+            tcount = self.estep_count * self.action_repeat * self.time_step / 1000.0  # 흐른 시간 (초)
 
             info['episode_metrics'] = {
                 'ending/achvRate': w.waypoint_idx / w.path_len,
                 'ending/type':     ending,
                 'ending/estep':    self.estep_count,
                 'ending/wstep':    self.estep_count * self.action_repeat,
-                'rewards/0.total':       self.reward_totals[0]/wstep_count,
-                'rewards/1.wPoint':      self.reward_totals[1]/wstep_count,
-                'rewards/2.fail':        self.reward_totals[2]/wstep_count,
-                'rewards/3.time':        self.reward_totals[3]/wstep_count,
-                'rewards/4.progress':    self.reward_totals[4]/wstep_count,
-                'rewards/5.ws':          self.reward_totals[5]/wstep_count,
-                'rewards/6.ad':          self.reward_totals[6]/wstep_count,
-                'rewards/7.danger':      self.reward_totals[7]/wstep_count,
-                'rewards/8.danger_d':    self.reward_totals[8]/wstep_count,
+                'ending/sec':      tcount,
+                'rewards/0.total':       self.reward_totals[0]/tcount,
+                'rewards/1.wPoint':      self.reward_totals[1]/tcount,
+                'rewards/2.fail':        self.reward_totals[2]/tcount,
+                'rewards/3.time':        self.reward_totals[3]/tcount,
+                'rewards/4.progress':    self.reward_totals[4]/tcount,
+                'rewards/5.ws':          self.reward_totals[5]/tcount,
+                'rewards/6.ad':          self.reward_totals[6]/tcount,
+                'rewards/7.danger':      self.reward_totals[7]/tcount,
+                'rewards/8.danger_d':    self.reward_totals[8]/tcount,
                 'metrics/ws_var':        ws_var,
                 'metrics/ad_var':        ad_var,
                 'metrics/speed_mean':    speed_mean,
