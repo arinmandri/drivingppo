@@ -82,24 +82,32 @@ def generate_random_world_plain(
         px = map_w/2
         pz = map_h/2
         pangle_x = np.random.uniform(0, pi2)
-        init_ang = np.random.uniform(0, pi2)  if ang_init == 'rand'  else pangle_x-pi/2 + np.random.uniform(0, pi)  if ang_init == 'half'  else pangle_x  if ang_init == 'p'  else pangle_x+pi  if ang_init == 'inv'  else ang_init
+        init_ang = np.random.uniform(0, pi2)                   if ang_init == 'rand'  else \
+                   pangle_x - pi/2 + np.random.uniform(0, pi)  if ang_init == 'half'  else \
+                   pangle_x                                    if ang_init == 'p'     else \
+                   pangle_x + pi                               if ang_init == 'inv'   else \
+                   ang_init
     elif pos_init == 'corner':
         px = map_w/10
         pz = map_h/10
         pangle_x = np.random.uniform(0, pi2)
-        init_ang = np.random.uniform(0, pi/4)  if ang_init == 'rand'  or ang_init == 'half'  else pangle_x  if ang_init == 'p'  else pangle_x+pi  if ang_init == 'inv'  else ang_init
+        init_ang = np.random.uniform(0, pi/4)  if ang_init == 'rand'  \
+                                               or ang_init == 'half'  else \
+                   pangle_x                    if ang_init == 'p'     else \
+                   pangle_x+pi                 if ang_init == 'inv'   else \
+                   ang_init
 
     pspeed = np.random.uniform(-SPD_MAX_STD, SPD_MAX_STD)*0.5  if spd_init == 'rand'  else spd_init
 
 
     # 목표점 생성
     waypoints = generate_random_waypoints(num,
-                                              map_w, map_h,
-                                              px, pz,
-                                              init_ang=init_ang,
-                                              angle_change_limit=ang_lim,
-                                              min_dist=min_dist,
-                                              max_dist=max_dist)
+                                          map_w, map_h,
+                                          px, pz,
+                                          init_ang=init_ang,
+                                          angle_change_limit=ang_lim,
+                                          min_dist=min_dist,
+                                          max_dist=max_dist)
 
     # 맵 생성
     obstacle_map = create_empty_map(map_w, map_h)
