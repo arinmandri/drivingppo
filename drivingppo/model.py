@@ -399,7 +399,7 @@ def run(
     env = WorldEnv(
         world_generator=world_generator,
         time_step=time_step,
-        wstep_per_control=1,
+        action_repeat=1,
         render_mode='debug',
         auto_close_at_end=auto_close_at_end
     )
