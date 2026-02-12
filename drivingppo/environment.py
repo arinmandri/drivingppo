@@ -271,7 +271,7 @@ class WorldEnv(gym.Env):
 
         if p.speed < 0:
             # 후진진행 억제
-            self.time_limit += int(s_norm*700)
+            self.time_limit += int(s_norm*1000)
 
         # 충돌
         if result_collision  and self.collision_ending:
@@ -292,8 +292,6 @@ class WorldEnv(gym.Env):
                 # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
                 self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
                 self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
-            else:
-                reward_step[1] += 20.0 + (20.0 * cos_nx)
 
             self.prev_d = self.prev_d1
 
@@ -302,6 +300,8 @@ class WorldEnv(gym.Env):
             # 최종 목표 도달
             if w.arrived:
                 ending = 'arrived'
+                if reward_step[1] <= 0.0:  # 후진진행한 게 틀림없다.
+                    reward_step[1] = - 150.0
                 terminated = True
 
         # 전혀 엉뚱한 곳 감
@@ -331,7 +331,8 @@ class WorldEnv(gym.Env):
             reward_time = -0.5
 
             distance_d = distance - self.prev_d
-            stat_progress     = - distance_d * 0.15  if s_norm > 0  else 0.0
+            stat_progress     = - distance_d * 0.2
+            if s_norm < 0: stat_progress = min(0.0, stat_progress)
             reward_action_ws  = - ws**2 * 0.5
             reward_action_ad  = - ad**2 * 0.5
             danger            = - ld_max_1 * 0.06
