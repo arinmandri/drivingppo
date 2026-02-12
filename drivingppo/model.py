@@ -206,7 +206,7 @@ def train_start(
         lr=3e-4,
         gamma=0.9,
         ent_coef=0.01,
-        n_steps=1024,
+        n_steps=2048,
         batch_size=256,
         progress_bar=True,
         seed=42

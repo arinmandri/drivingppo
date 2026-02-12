@@ -175,6 +175,7 @@ class WorldEnv(gym.Env):
         self.time_gain_limit = time_gain_limit  # 남은 제한시간 최대량(천분초)
 
         self.collision_ending = collision_ending
+        self.tfac = action_repeat * time_step / 1000.0
 
         # Action: [A_forward, A_steer]
         self.action_space = spaces.Box(  # Forward, Steer
@@ -328,24 +329,24 @@ class WorldEnv(gym.Env):
         else:
             # 밀집보상
 
-            reward_time = -0.5
+            reward_time = -5.0
 
             distance_d = distance - self.prev_d
             stat_progress     = - distance_d * 0.2
             if s_norm < 0: stat_progress = min(0.0, stat_progress)
-            reward_action_ws  = - ws**2 * 0.5
-            reward_action_ad  = - ad**2 * 0.5
-            danger            = - ld_max_1 * 0.06
-            danger_d          = - ld_max_d * 8.0
+            reward_action_ws  = - ws**2 * 5.0
+            reward_action_ad  = - ad**2 * 5.0
+            danger            = - ld_max_1 * 0.6
+            danger_d          = - ld_max_d * 80.0
             total = reward_time + stat_progress + reward_action_ws + reward_action_ad + danger + danger_d
-            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} | danger {danger:+5.2f}~{danger_d:+5.2f} --> {total:+6.2f}')
+            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress/self.tfac:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} | danger {danger:+5.2f}~{danger_d:+5.2f} --> {total:+6.2f}')
 
-            reward_step[3] += self.action_repeat * reward_time
+            reward_step[3] += self.tfac * reward_time
             reward_step[4] += stat_progress
-            reward_step[5] += self.action_repeat * reward_action_ws
-            reward_step[6] += self.action_repeat * reward_action_ad
-            reward_step[7] += self.action_repeat * danger
-            reward_step[8] += self.action_repeat * danger_d
+            reward_step[5] += self.tfac * reward_action_ws
+            reward_step[6] += self.tfac * reward_action_ad
+            reward_step[7] += self.tfac * danger
+            reward_step[8] += self.tfac * danger_d
 
         info = {'current_time': w.t_acc / 1000.0}
 
