@@ -277,11 +277,12 @@ class WorldEnv(gym.Env):
         # 목표점 도달
         elif result_wpoint:
             if p.speed > 0:  # 후진 진행 억제
-                reward_step[1] += 30.0 + 20.0 * cos_nx
-
-            # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
-            self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
-            self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
+                reward_step[1] += 10.0 + (20.0 * cos_pv) + (20.0 * cos_nx)
+                # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
+                self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
+                self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
+            else:
+                reward_step[1] += -10.0 + (20.0 * cos_nx)
 
             self.prev_d = self.prev_d1
 

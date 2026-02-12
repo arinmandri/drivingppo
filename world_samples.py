@@ -42,7 +42,7 @@ CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 �
 
 def gen_0(): return generate_random_world_plain(map_h= 50, map_w= 50, num=1,  min_dist=6,  max_dist=12, ang_init='half', ang_lim=pi*0.5, spd_init=0)
 def gen_1(): return generate_random_world_plain(map_h=150, map_w=150, num=4,  min_dist=8,  max_dist=20, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
-def gen_2(): return generate_random_world_plain(map_h=300, map_w=300, num=30, min_dist=8,  max_dist=45, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
+def gen_2(): return generate_random_world_plain(map_h=300, map_w=300, num=10, min_dist=8,  max_dist=45, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
 def gen_obs():
     if randint(0, 1):
         choice = randint(0, 5)
