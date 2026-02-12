@@ -159,6 +159,7 @@ class WorldEnv(gym.Env):
                  wstep_per_control=3,
                  time_gain_per_waypoint_rate=500,
                  time_gain_limit=20_000,
+                 collision_ending=True,
                  render_mode:Literal['window','debug']|None=None,
                  auto_close_at_end=True):
 
@@ -170,6 +171,8 @@ class WorldEnv(gym.Env):
         self.max_time = max_time  # 최대 에피소드 길이(천분초)
         self.time_gain_per_waypoint_rate = time_gain_per_waypoint_rate  # 다음 목표점까지 거리 1당 획득 시간(천분초)
         self.time_gain_limit = time_gain_limit  # 남은 제한시간 최대량(천분초)
+
+        self.collision_ending = collision_ending
 
         # Action: [A_forward, A_steer]
         self.action_space = spaces.Box(  # Forward, Steer
@@ -269,20 +272,26 @@ class WorldEnv(gym.Env):
             self.time_limit += int(s_norm*700)
 
         # 충돌
-        if result_collision:
+        if result_collision  and self.collision_ending:
             reward_step[2] += -150.0
             ending = 'collision'
             terminated = True
 
+        # 시간 내에 도착 못 함
+        elif w.t_acc > self.time_limit  and self.collision_ending:
+            reward_step[2] += -150.0
+            ending = 'timeover'
+            truncated = True
+
         # 목표점 도달
         elif result_wpoint:
             if p.speed > 0:  # 후진 진행 억제
-                reward_step[1] += 10.0 + (20.0 * cos_pv) + (20.0 * cos_nx)
+                reward_step[1] += 30.0 + (10.0 * cos_pv) + (20.0 * cos_nx)
                 # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
                 self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
                 self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
             else:
-                reward_step[1] += -10.0 + (20.0 * cos_nx)
+                reward_step[1] += 20.0 + (20.0 * cos_nx)
 
             self.prev_d = self.prev_d1
 
@@ -300,12 +309,6 @@ class WorldEnv(gym.Env):
             ending = 'lost'
             truncated = True
 
-        # 시간 내에 도착 못 함
-        elif w.t_acc >= self.time_limit:
-            reward_step[2] += -150.0
-            ending = 'timeover'
-            truncated = True
-
         # 획득한 시간은 모자르지 않으나 그냥 이제까지 많이 함.
         elif w.t_acc >= self.max_time:
             ending = 'timeout'
@@ -321,7 +324,7 @@ class WorldEnv(gym.Env):
             self.print_log(f'결과{icon} 도착: {w.waypoint_idx:3d}/{w.path_len:3d} | 시간: {int(w.t_acc/1000):3d}/{int(self.time_limit/1000):3d}/{int(self.max_time/1000):3d} 초 ({int(w.t_acc/self.max_time*100):3d}%) | 위치: {int(p.x):4d}, {int(p.z):4d} ({int(p.x/self.world.MAP_W*100):3d}%, {int(p.z/self.world.MAP_H*100):3d}%)')
 
         else:
-            # 진행 보상
+            # 밀집보상
 
             reward_time = -0.5
 
