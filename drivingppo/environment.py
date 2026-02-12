@@ -9,6 +9,8 @@ from .world import World, distance_of, angle_of, pi, pi2, rad_to_deg
 from .simsim import WorldViewer
 from .common import (
     SPD_MAX_STD,
+    WORLD_DT,
+    ACTION_REPEAT,
     LOOKAHEAD_POINTS,
     OBSERVATION_IND_SPD,
     OBSERVATION_IND_WPOINT_0,
@@ -155,8 +157,8 @@ class WorldEnv(gym.Env):
     def __init__(self,
                  world_generator:Callable[[], World],
                  max_time=120_000,
-                 time_step=111,
-                 wstep_per_control=3,
+                 time_step=WORLD_DT,
+                 action_repeat=ACTION_REPEAT,
                  time_gain_per_waypoint_rate=500,
                  time_gain_limit=20_000,
                  render_mode:Literal['window','debug']|None=None,
@@ -166,7 +168,7 @@ class WorldEnv(gym.Env):
         self.closed = False
 
         self.time_step = time_step  # 월드의 1스텝당 흐르는 시간(천분초)
-        self.wstep_per_control = wstep_per_control  # 조작값 변경은 월드의 n스텝마다 한 번. Tank Challenge에서도 FPS는 30이어도 API 요청은 최소 0.1초마다 한 번으로 설정 가능하다.
+        self.action_repeat = action_repeat  # 조작값 변경은 월드의 n스텝마다 한 번.
         self.max_time = max_time  # 최대 에피소드 길이(천분초)
         self.time_gain_per_waypoint_rate = time_gain_per_waypoint_rate  # 다음 목표점까지 거리 1당 획득 시간(천분초)
         self.time_gain_limit = time_gain_limit  # 남은 제한시간 최대량(천분초)
@@ -235,7 +237,7 @@ class WorldEnv(gym.Env):
         apply_action(self.world, action)
         result_collision = False
         result_wpoint = False
-        for _ in range(self.wstep_per_control):
+        for _ in range(self.action_repeat):
             _, result_collision_step, result_wpoint_step = w.step(self.time_step)
             result_collision += result_collision_step
             result_wpoint      += result_wpoint_step
@@ -326,20 +328,20 @@ class WorldEnv(gym.Env):
             reward_time = -0.5
 
             distance_d = distance - self.prev_d
-            stat_progress     = - distance_d * 0.15  if s_norm > 0  else 0.0
+            reward_progress   = - distance_d * 0.15  if s_norm > 0  else 0.0
             reward_action_ws  = - ws**2 * 0.5
             reward_action_ad  = - ad**2 * 0.5
             danger            = - ld_max_1 * 0.06
             danger_d          = - ld_max_d * 8.0
-            total = reward_time + stat_progress + reward_action_ws + reward_action_ad + danger + danger_d
-            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} | danger {danger:+5.2f}~{danger_d:+5.2f} --> {total:+6.2f}')
+            total = reward_time + reward_progress + reward_action_ws + reward_action_ad + danger + danger_d
+            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {reward_progress:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} | danger {danger:+5.2f}~{danger_d:+5.2f} --> {total:+6.2f}')
 
-            reward_step[3] += self.wstep_per_control * reward_time
-            reward_step[4] += stat_progress
-            reward_step[5] += self.wstep_per_control * reward_action_ws
-            reward_step[6] += self.wstep_per_control * reward_action_ad
-            reward_step[7] += self.wstep_per_control * danger
-            reward_step[8] += self.wstep_per_control * danger_d
+            reward_step[3] += self.action_repeat * reward_time
+            reward_step[4] += reward_progress
+            reward_step[5] += self.action_repeat * reward_action_ws
+            reward_step[6] += self.action_repeat * reward_action_ad
+            reward_step[7] += self.action_repeat * danger
+            reward_step[8] += self.action_repeat * danger_d
 
         info = {'current_time': w.t_acc / 1000.0}
 
@@ -366,12 +368,12 @@ class WorldEnv(gym.Env):
                 speed_var = 0.0
                 speed_mean = 0.0
 
-            wstep_count = self.estep_count * self.wstep_per_control
+            wstep_count = self.estep_count * self.action_repeat
 
             info['episode_metrics'] = {
                 'ending/type': ending,
                 'ending/estep': self.estep_count,
-                'ending/wstep': self.estep_count * self.wstep_per_control,
+                'ending/wstep': self.estep_count * self.action_repeat,
                 'rewards/0.total':       self.reward_totals[0]/wstep_count,
                 'rewards/1.wPoint':      self.reward_totals[1]/wstep_count,
                 'rewards/2.fail':        self.reward_totals[2]/wstep_count,
@@ -437,7 +439,7 @@ class WorldEnv(gym.Env):
         self.viewer.update()
 
     def print_result(self):
-        wstep_count = self.estep_count * self.wstep_per_control
+        wstep_count = self.estep_count * self.action_repeat
         if wstep_count:
             self.print_log(f'총점 {int(self.reward_totals[0]):5d} '
                            f'| wpoint {  self.reward_totals[1]:6.1f}({ int(self.reward_totals[1]/wstep_count*100)}%) '

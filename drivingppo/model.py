@@ -5,6 +5,8 @@ from collections import defaultdict
 from .world import World
 from .environment import WorldEnv
 from .common import (
+    WORLD_DT,
+    ACTION_REPEAT,
     LOOKAHEAD_POINTS,
     EACH_POINT_INFO_SIZE,
     LIDAR_NUM,
@@ -388,8 +390,8 @@ def run(
         world_generator:Callable[[], World],
         model:PPO|str,
         time_spd=2.0,
-        time_step=111,
-        step_per_control=3,
+        time_step=WORLD_DT,
+        step_per_control=ACTION_REPEAT,
         auto_close_at_end=True,
     ):
     """
@@ -399,7 +401,7 @@ def run(
     env = WorldEnv(
         world_generator=world_generator,
         time_step=time_step,
-        wstep_per_control=1,
+        action_repeat=1,
         render_mode='debug',
         auto_close_at_end=auto_close_at_end
     )
