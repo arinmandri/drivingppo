@@ -9,6 +9,8 @@ from .world import World, distance_of, angle_of, pi, pi2, rad_to_deg
 from .simsim import WorldViewer
 from .common import (
     SPD_MAX_STD,
+    WORLD_DT,
+    ACTION_REPEAT,
     LOOKAHEAD_POINTS,
     OBSERVATION_IND_SPD,
     OBSERVATION_IND_WPOINT_0,
@@ -155,8 +157,8 @@ class WorldEnv(gym.Env):
     def __init__(self,
                  world_generator:Callable[[], World],
                  max_time=120_000,
-                 time_step=111,
-                 action_repeat=3,
+                 time_step=WORLD_DT,
+                 action_repeat=ACTION_REPEAT,
                  time_gain_per_waypoint_rate=500,
                  time_gain_limit=20_000,
                  collision_ending=True,

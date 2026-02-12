@@ -5,9 +5,13 @@ import torch
 SPEED_MAX_W:float = 19.44
 SPD_MAX_STD = 10.0
 
-# Tank Challenge의 맵 크기
+# 기본 맵 크기 (Tank Challenge)
 MAP_W = 300
 MAP_H = 300
+
+# 환경 설정
+WORLD_DT = 111
+ACTION_REPEAT = 3
 
 # 설계 파라미터
 LOOKAHEAD_POINTS = 4  # 경로 추종을 위한 앞의 N개 점
