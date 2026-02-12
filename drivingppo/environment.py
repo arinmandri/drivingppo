@@ -369,9 +369,10 @@ class WorldEnv(gym.Env):
             wstep_count = self.estep_count * self.wstep_per_control
 
             info['episode_metrics'] = {
-                'ending/type': ending,
-                'ending/estep': self.estep_count,
-                'ending/wstep': self.estep_count * self.wstep_per_control,
+                'ending/achvRate': w.waypoint_idx / w.path_len,
+                'ending/type':     ending,
+                'ending/estep':    self.estep_count,
+                'ending/wstep':    self.estep_count * self.wstep_per_control,
                 'rewards/0.total':       self.reward_totals[0]/wstep_count,
                 'rewards/1.wPoint':      self.reward_totals[1]/wstep_count,
                 'rewards/2.fail':        self.reward_totals[2]/wstep_count,
