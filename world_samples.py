@@ -452,7 +452,10 @@ def generate_random_waypoints(
     for i in range(num):
 
         # 랜덤 거리
-        distance = np.random.uniform(min_dist, max_dist)
+        if i == 0:
+            distance = NEAR
+        else:
+            distance = np.random.uniform(min_dist, max_dist)
 
         # 새 좌표 계산
         x = last_x + math.sin(angle) * distance
