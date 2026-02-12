@@ -327,7 +327,7 @@ class WorldEnv(gym.Env):
 
             distance_d = distance - self.prev_d
             stat_progress     = - distance_d * 0.15  if s_norm > 0  else 0.0
-            reward_action_ws  = - ws**2 * 0.3
+            reward_action_ws  = - ws**2 * 0.5
             reward_action_ad  = - ad**2 * 0.5
             danger            = - ld_max_1 * 0.06
             danger_d          = - ld_max_d * 8.0
