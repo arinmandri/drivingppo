@@ -11,7 +11,7 @@ MAP_H = 300
 
 # 환경 설정
 WORLD_DT = 50
-ACTION_REPEAT = 7
+ACTION_REPEAT = 4
 
 # 설계 파라미터
 LOOKAHEAD_POINTS = 4  # 경로 추종을 위한 앞의 N개 점

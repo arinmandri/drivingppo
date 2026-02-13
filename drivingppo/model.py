@@ -391,7 +391,7 @@ def run(
         model:PPO|str,
         time_spd=2.0,
         time_step=WORLD_DT,
-        step_per_control=ACTION_REPEAT,
+        action_repeat=ACTION_REPEAT,
         auto_close_at_end=True,
     ):
     """
@@ -418,7 +418,7 @@ def run(
     while not terminated and not truncated:
 
         action, _ = model.predict(obs, deterministic=True)  # 에이전트가 행동 선택
-        for _ in range(step_per_control):
+        for _ in range(action_repeat):
             obs, reward, terminated, truncated, info = env.step(action)  # 행동 실행
             episode_reward += reward
             env.render()  # 시각화 호출

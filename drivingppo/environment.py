@@ -245,9 +245,9 @@ class WorldEnv(gym.Env):
             _, result_collision_step, result_wpoint_step = w.step(self.time_step)
             result_collision += result_collision_step
             result_wpoint      += result_wpoint_step
-        if self.estep_count == 1:
-            if result_collision: print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 충돌 (hint: 목표점 수 {w.path_len})')
-            if result_wpoint:    print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 골 (hint: 목표점 수 {w.path_len})')
+        # if self.estep_count == 1:
+        #     if result_collision: print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 충돌 (hint: 목표점 수 {w.path_len})')
+        #     if result_wpoint:    print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 골 (hint: 목표점 수 {w.path_len})')
 
         observation1 = self.observation
 
