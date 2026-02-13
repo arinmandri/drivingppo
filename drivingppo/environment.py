@@ -142,6 +142,8 @@ def apply_action(world:World, action:Arr):
     행동 벡터 [A_forward, A_steer]를 World의 제어 함수로 변환하여 적용
     """
     ws, ad = action
+    ws = float(ws)
+    ad = float(ad)
     world.set_action(ws, ad, False)
 
 def action_str(action):
@@ -230,6 +232,8 @@ class WorldEnv(gym.Env):
 
         self.action_history.append(action)  # 매스텝 액션 기록
         ws, ad = action
+        ws = float(ws)
+        ad = float(ad)
 
         w = self.world
         p = w.player
@@ -362,14 +366,14 @@ class WorldEnv(gym.Env):
             # 액션 분산
             if len(self.action_history) > 0:
                 action_arr = np.array(self.action_history)
-                ws_var = np.var(action_arr[:, 0])
-                ad_var = np.var(action_arr[:, 1])
+                ws_var = float(np.var(action_arr[:, 0]))
+                ad_var = float(np.var(action_arr[:, 1]))
             else:
                 ws_var, ad_var = 0.0, 0.0
 
             if len(self.speed_history) > 0:
                 speed_arr = np.array(self.speed_history)
-                speed_var = np.var(speed_arr)
+                speed_var = float(np.var(speed_arr))
                 speed_mean = sum(self.speed_history) / len(self.speed_history)
             else:
                 speed_var = 0.0

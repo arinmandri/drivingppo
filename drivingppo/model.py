@@ -1,5 +1,5 @@
 from typing import Callable, Literal
-import os, time, random
+import os, time, random, json
 from collections import defaultdict
 
 from .world import World
@@ -425,6 +425,7 @@ def run(
             time.sleep(time_step / 1000.0 / time_spd)# 시각화 프레임을 위해 딜레이 추가
             if terminated or truncated: break
 
+    print(json.dumps(info, indent=4))
     print(f"에피소드 종료. 총 보상: {episode_reward:.2f}")
 
     env.close()
