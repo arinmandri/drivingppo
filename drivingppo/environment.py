@@ -293,7 +293,7 @@ class WorldEnv(gym.Env):
         # 목표점 도달
         elif result_wpoint:
             if p.speed > 0:  # 후진 진행 억제
-                reward_step[1] += 30.0 + (cos_nx * 30.0) + (s_norm * 15.0)
+                reward_step[1] += 40.0 + (cos_nx * 10.0) + (s_norm * 5.0)
                 # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
                 self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
                 self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
@@ -305,8 +305,8 @@ class WorldEnv(gym.Env):
             # 최종 목표 도달
             if w.arrived:
                 ending = 'arrived'
-                if reward_step[1] <= 0.0:  # 후진진행한 게 틀림없다.
-                    reward_step[1] = - 150.0
+                if sum(self.speed_history) <= 0.0:  # 후진진행한 게 틀림없다.
+                    reward_step[1] = - 300.0
                 terminated = True
 
         # 전혀 엉뚱한 곳 감
