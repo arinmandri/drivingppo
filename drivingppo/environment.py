@@ -253,6 +253,8 @@ class WorldEnv(gym.Env):
         #     if result_collision: print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 충돌 (hint: 목표점 수 {w.path_len})')
         #     if result_wpoint:    print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 골 (hint: 목표점 수 {w.path_len})')
 
+        info = {'current_time': w.t_acc / 1000.0}
+
         observation1 = self.observation
 
         if self.render_mode == 'debug': print(action_str(action))
@@ -293,7 +295,7 @@ class WorldEnv(gym.Env):
         # 목표점 도달
         elif result_wpoint:
             if p.speed > 0:  # 후진 진행 억제
-                reward_step[1] += 40.0 + (cos_nx * 10.0) + (s_norm * 5.0)
+                reward_step[1] += 50.0
                 # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
                 self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
                 self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
@@ -336,11 +338,11 @@ class WorldEnv(gym.Env):
             reward_time = -5.0
 
             distance_d = distance - self.prev_d
-            reward_progress    = - distance_d * 0.3
+            reward_progress    = - distance_d * 0.2
             if s_norm < 0: reward_progress = min(0.0, reward_progress)
             reward_orientation = cos_nx * 0.2
-            reward_action_ws   = - abs(ws * s_norm) * 8.0
-            reward_action_ad   = - ad * ad * 4.0
+            reward_action_ws   = - ws * s_norm * 4.0  if ws * s_norm > 0  else 0.0  # 브레이크 사용시 비용 없다 침.
+            reward_action_ad   = - ad * ad * 1.7
             danger             = - ld_max_1 * 0.6
             danger_d           = - ld_max_d * 80.0
             total = reward_time + reward_progress + reward_action_ws + reward_action_ad + danger + danger_d
@@ -353,8 +355,6 @@ class WorldEnv(gym.Env):
             reward_step[7] += self.tfac * reward_action_ad
             reward_step[8] += self.tfac * danger
             reward_step[9] += self.tfac * danger_d
-
-        info = {'current_time': w.t_acc / 1000.0}
 
         # 점수 합
         reward_step[0] = sum(reward_step[1:])

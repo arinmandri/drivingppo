@@ -202,12 +202,12 @@ def train_start(
         tb_log:bool=False,
         run_name:str='DPPO',
         *,
+        n_steps=512,
+        batch_size=256,
         vec_env:Literal['dummy', 'subp']|VecEnv='dummy',
         lr=3e-4,
         gamma=0.9,
         ent_coef=0.01,
-        n_steps=1024,
-        batch_size=256,
         progress_bar=True,
         seed=42
 ) -> PPO:
