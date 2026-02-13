@@ -30,7 +30,7 @@ from numpy import ndarray as Arr
 import gymnasium as gym
 from gymnasium import spaces
 
-METRIC_SIZE = 9
+METRIC_SIZE = 10
 
 
 def get_state(world:World):
@@ -289,7 +289,7 @@ class WorldEnv(gym.Env):
         # 목표점 도달
         elif result_wpoint:
             if p.speed > 0:  # 후진 진행 억제
-                reward_step[1] += 50.0 + (30.0 * cos_nx)
+                reward_step[1] += (1 + cos_nx) * s_norm * 60.0
                 # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
                 self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
                 self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
@@ -332,21 +332,23 @@ class WorldEnv(gym.Env):
             reward_time = -5.0
 
             distance_d = distance - self.prev_d
-            stat_progress     = - distance_d * 0.2
-            if s_norm < 0: stat_progress = min(0.0, stat_progress)
-            reward_action_ws  = - ws**2 * 5.0
-            reward_action_ad  = - ad**2 * 5.0
-            danger            = - ld_max_1 * 0.6
-            danger_d          = - ld_max_d * 80.0
-            total = reward_time + stat_progress + reward_action_ws + reward_action_ad + danger + danger_d
-            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {stat_progress/self.tfac:+5.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} | danger {danger:+5.2f}~{danger_d:+5.2f} --> {total:+6.2f}')
+            reward_progress    = - distance_d * 0.3
+            if s_norm < 0: reward_progress = min(0.0, reward_progress)
+            reward_orientation = cos_nx * 0.4
+            reward_action_ws   = - ws**2 * 5.0
+            reward_action_ad   = - ad**2 * 5.0
+            danger             = - ld_max_1 * 0.6
+            danger_d           = - ld_max_d * 80.0
+            total = reward_time + reward_progress + reward_action_ws + reward_action_ad + danger + danger_d
+            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {reward_progress/self.tfac:+5.2f} | ort {reward_orientation:+4.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} | danger {danger:+5.2f}~{danger_d:+5.2f} --> {total:+6.2f}')
 
             reward_step[3] += self.tfac * reward_time
-            reward_step[4] += stat_progress
-            reward_step[5] += self.tfac * reward_action_ws
-            reward_step[6] += self.tfac * reward_action_ad
-            reward_step[7] += self.tfac * danger
-            reward_step[8] += self.tfac * danger_d
+            reward_step[4] += reward_progress
+            reward_step[5] += self.tfac * reward_orientation
+            reward_step[6] += self.tfac * reward_action_ws
+            reward_step[7] += self.tfac * reward_action_ad
+            reward_step[8] += self.tfac * danger
+            reward_step[9] += self.tfac * danger_d
 
         info = {'current_time': w.t_acc / 1000.0}
 
@@ -386,10 +388,11 @@ class WorldEnv(gym.Env):
                 'rewards/2.fail':        self.reward_totals[2]/tcount,
                 'rewards/3.time':        self.reward_totals[3]/tcount,
                 'rewards/4.progress':    self.reward_totals[4]/tcount,
-                'rewards/5.ws':          self.reward_totals[5]/tcount,
-                'rewards/6.ad':          self.reward_totals[6]/tcount,
-                'rewards/7.danger':      self.reward_totals[7]/tcount,
-                'rewards/8.danger_d':    self.reward_totals[8]/tcount,
+                'rewards/5.orientat':    self.reward_totals[5]/tcount,
+                'rewards/6.ws':          self.reward_totals[6]/tcount,
+                'rewards/7.ad':          self.reward_totals[7]/tcount,
+                'rewards/8.danger':      self.reward_totals[8]/tcount,
+                'rewards/9.danger_d':    self.reward_totals[9]/tcount,
                 'metrics/ws_var':        ws_var,
                 'metrics/ad_var':        ad_var,
                 'metrics/speed_mean':    speed_mean,
@@ -453,10 +456,11 @@ class WorldEnv(gym.Env):
                            f'| fail {    self.reward_totals[2]:6.1f}({ int(self.reward_totals[2]/wstep_count*100)}%) '
                            f'| time {    self.reward_totals[3]:+7.2f}({int(self.reward_totals[3]/wstep_count*100)}%) '
                            f'| prog {    self.reward_totals[4]:+7.2f}({int(self.reward_totals[4]/wstep_count*100)}%) '
-                           f'| ws {      self.reward_totals[5]:+7.2f}({int(self.reward_totals[5]/wstep_count*100)}%) '
-                           f'| ad {      self.reward_totals[6]:+7.2f}({int(self.reward_totals[6]/wstep_count*100)}%) '
-                           f'| danger {  self.reward_totals[7]:+7.2f}({int(self.reward_totals[7]/wstep_count*100)}%) '
-                           f'| danger_d {self.reward_totals[8]:+7.2f}({int(self.reward_totals[8]/wstep_count*100)}%)')
+                           f'| ort {     self.reward_totals[5]:+7.2f}({int(self.reward_totals[5]/wstep_count*100)}%) '
+                           f'| ws {      self.reward_totals[6]:+7.2f}({int(self.reward_totals[6]/wstep_count*100)}%) '
+                           f'| ad {      self.reward_totals[7]:+7.2f}({int(self.reward_totals[7]/wstep_count*100)}%) '
+                           f'| danger {  self.reward_totals[8]:+7.2f}({int(self.reward_totals[8]/wstep_count*100)}%) '
+                           f'| danger_d {self.reward_totals[9]:+7.2f}({int(self.reward_totals[9]/wstep_count*100)}%)')
 
     def print_log(
             self,
