@@ -289,7 +289,7 @@ class WorldEnv(gym.Env):
         # 목표점 도달
         elif result_wpoint:
             if p.speed > 0:  # 후진 진행 억제
-                reward_step[1] += (1 + cos_nx) * s_norm * 60.0
+                reward_step[1] += 30.0 + (cos_nx * 30.0) + (s_norm * 15.0)
                 # 추가시간 획득; 그러나 무한정 쌓이지는 않음.
                 self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
                 self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
@@ -334,9 +334,9 @@ class WorldEnv(gym.Env):
             distance_d = distance - self.prev_d
             reward_progress    = - distance_d * 0.3
             if s_norm < 0: reward_progress = min(0.0, reward_progress)
-            reward_orientation = cos_nx * 0.4
-            reward_action_ws   = - ws**2 * 5.0
-            reward_action_ad   = - ad**2 * 5.0
+            reward_orientation = cos_nx * 0.2
+            reward_action_ws   = - abs(ws * s_norm) * 8.0
+            reward_action_ad   = - ad * ad * 4.0
             danger             = - ld_max_1 * 0.6
             danger_d           = - ld_max_d * 80.0
             total = reward_time + reward_progress + reward_action_ws + reward_action_ad + danger + danger_d
