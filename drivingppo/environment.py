@@ -139,9 +139,6 @@ def distance_score_far(x:float) -> float:
 
 
 def apply_action(world:World, action:Arr):
-    """
-    행동 벡터 [A_forward, A_steer]를 World의 제어 함수로 변환하여 적용
-    """
     ws, ad = action
     ws = float(ws)
     ad = float(ad)
@@ -241,6 +238,8 @@ class WorldEnv(gym.Env):
 
         ang_pv  = w.get_relative_angle_to_wpoint()
         cos_pv  = math.cos(ang_pv)
+        dis_pv  = w.get_distance_to_wpoint()
+        dis_pv1 = w.get_distance_to_wpoint(1)
 
         # 액션 적용
         apply_action(self.world, action)
@@ -268,6 +267,7 @@ class WorldEnv(gym.Env):
         distance = w.get_distance_to_wpoint()
         ang_nx  = w.get_relative_angle_to_wpoint()
         cos_nx  = math.cos(ang_nx)
+        dis_nx  = w.get_distance_to_wpoint()
 
         ld_max_0 = observation0[OBSERVATION_IND_LIDAR_S:OBSERVATION_IND_LIDAR_E].max()  if LIDAR_NUM  else 0.0
         ld_max_1 = observation1[OBSERVATION_IND_LIDAR_S:OBSERVATION_IND_LIDAR_E].max()  if LIDAR_NUM  else 0.0
@@ -301,7 +301,7 @@ class WorldEnv(gym.Env):
                 self.time_limit += int(distance * self.time_gain_per_waypoint_rate)
                 self.time_limit = min(self.time_limit, w.t_acc + self.time_gain_limit)
 
-            self.prev_d = self.prev_d1
+            dis_pv = dis_pv1
 
             if self.render_mode == 'debug': print(f'★[{w.waypoint_idx}] {reward_step[1]:.1f} ~ pass {int(round(ang_nx*rad_to_deg))}({cos_nx:.2f})')
 
@@ -332,37 +332,6 @@ class WorldEnv(gym.Env):
                 '💥' if ending == 'collision' else \
                 '⏰' if ending == 'timeover' else '??'
             self.print_log(f'결과{icon} 도착: {w.waypoint_idx:3d}/{w.path_len:3d} | 시간: {int(w.t_acc/1000):3d}/{int(self.time_limit/1000):3d}/{int(self.max_time/1000):3d} 초 ({int(w.t_acc/self.max_time*100):3d}%) | 위치: {int(p.x):4d}, {int(p.z):4d} ({int(p.x/self.world.MAP_W*100):3d}%, {int(p.z/self.world.MAP_H*100):3d}%)')
-
-        else:
-            # 밀집보상
-
-            reward_time = -5.0
-
-            distance_d = distance - self.prev_d
-            reward_progress    = - distance_d * 0.2
-            if s_norm < 0: reward_progress = min(0.0, reward_progress)
-            reward_orientation = cos_nx * 0.2
-            reward_action_ws   = - ws * s_norm * 4.0  if ws * s_norm > 0  else 0.0  # 브레이크 사용시 비용 없다 침.
-            reward_action_ad   = - ad * ad * 1.7
-            danger             = - ld_max_1 * 0.6
-            danger_d           = - ld_max_d * 80.0
-            total = reward_time + reward_progress + reward_action_ws + reward_action_ad + danger + danger_d
-            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {reward_progress/self.tfac:+5.2f} | ort {reward_orientation:+4.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} | danger {danger:+5.2f}~{danger_d:+5.2f} --> {total:+6.2f}')
-
-            reward_step[3] += self.tfac * reward_time
-            reward_step[4] += reward_progress
-            reward_step[5] += self.tfac * reward_orientation
-            reward_step[6] += self.tfac * reward_action_ws
-            reward_step[7] += self.tfac * reward_action_ad
-            reward_step[8] += self.tfac * danger
-            reward_step[9] += self.tfac * danger_d
-
-        # 점수 합
-        reward_step[0] = sum(reward_step[1:])
-        for i in range(METRIC_SIZE):
-            self.reward_totals[i] += reward_step[i]
-
-        if truncated or terminated:
 
             # 액션 분산
             if len(self.action_history) > 0:
@@ -406,8 +375,34 @@ class WorldEnv(gym.Env):
 
             self.print_result()
 
-        self.prev_d = distance
-        self.prev_d1 = w.get_distance_to_wpoint(1)
+        else:
+            # 밀집보상
+
+            reward_time = -5.0
+
+            distance_d = dis_nx - dis_pv
+            reward_progress    = - distance_d * 0.2
+            if s_norm < 0: reward_progress = min(0.0, reward_progress)
+            reward_orientation = cos_nx * 0.2
+            reward_action_ws   = - ws * s_norm * 4.0  if ws * s_norm > 0  else 0.0  # 브레이크 사용시 비용 없다 침.
+            reward_action_ad   = - ad * ad * 1.7
+            danger             = - ld_max_1 * 0.6
+            danger_d           = - ld_max_d * 80.0
+            total = reward_time + reward_progress + reward_action_ws + reward_action_ad + danger + danger_d
+            if self.render_mode == 'debug': print(f'REWARD: time {reward_time:+5.2f} |  prog {reward_progress/self.tfac:+5.2f} | ort {reward_orientation:+4.2f} | ws {reward_action_ws:+4.2f} | ad {reward_action_ad:+4.2f} | danger {danger:+5.2f}~{danger_d:+5.2f} --> {total:+6.2f}')
+
+            reward_step[3] += self.tfac * reward_time
+            reward_step[4] += reward_progress
+            reward_step[5] += self.tfac * reward_orientation
+            reward_step[6] += self.tfac * reward_action_ws
+            reward_step[7] += self.tfac * reward_action_ad
+            reward_step[8] += self.tfac * danger
+            reward_step[9] += self.tfac * danger_d
+
+        # 점수 합
+        reward_step[0] = sum(reward_step[1:])
+        for i in range(METRIC_SIZE):
+            self.reward_totals[i] += reward_step[i]
 
         # Gymnasium 표준 반환
         return observation1, reward_step[0], terminated, truncated, info
@@ -427,9 +422,6 @@ class WorldEnv(gym.Env):
         self.time_limit = self.time_gain_limit  # 제한시간. 목표점 도달시마다 추가 획득.
         self.action_history = []  # 액션 기록
         self.speed_history = []
-
-        self.prev_d  = w.get_distance_to_wpoint()
-        self.prev_d1 = w.get_distance_to_wpoint(1)
 
         observation = self.observation
         info = {}
