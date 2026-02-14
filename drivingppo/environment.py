@@ -138,6 +138,55 @@ def distance_score_far(x:float) -> float:
     return x / DIS_SCFAC
 
 
+def get_pp_lookahead_point(world:World, ld:float):
+    p = world.player
+    px, pz = p.x, p.z
+    waypoints = world.waypoints
+    idx = world.waypoint_idx
+
+    lookahead_point = world.get_curr_wpoint()
+    found = False
+
+    # 현재 위치부터 남은 웨이포인트들을 선분으로 이어 교차점 검사
+    pts = [(px, pz)] + waypoints[idx:]
+
+    i = 0  # 반환되는 lookahead_point 다음의 웨이포인트는 몇 번째? (현재목표점은 0) pts의 0번 요소가 에이전트이므로 0번 wp는 pts의 1번 요소임.
+    for i in range(len(pts) - 1):
+        wp1x, wp1z = pts[i]
+        wp2x, wp2z = pts[i+1]
+
+        # 선분(wp1-wp2)과 원(중심:(px,pz), 반지름:ld)의 수학적 교차점 계산
+        fx, fz = wp1x - px,   wp1z - pz
+        dx, dz = wp2x - wp1x, wp2z - wp1z
+
+        # f:p~wp1 | d:wp1~wp2 | (f*t + d)^2 = l^2 | t에대한 2차방정식 풀이
+        a = dx*dx + dz*dz
+        b = 2 * (fx*dx + fz*dz)
+        c = (fx*fx + fz*fz) - ld*ld
+
+        D = b*b - 4*a*c  # discriminant
+        if D >= 0 and a > 0.00001:
+            D = math.sqrt(D)
+            t1 = (-b - D) / (2*a)
+            t2 = (-b + D) / (2*a)
+
+            # 진행 방향에 있는 선분 위의 교차점 (0 <= t <= 1) 선택
+            if 0 <= t2 <= 1:  # t2가 더 앞서 있는 점이므로 우선 채택
+                lookahead_point = (wp1x + t2*dx, wp1z + t2*dz)
+                found = True
+                break
+            elif 0 <= t1 <= 1:
+                lookahead_point = (wp1x + t1*dx, wp1z + t1*dz)
+                found = True
+                break
+
+    if found:
+        return lookahead_point, i
+
+    # 교차점을 못 찾았다면 (목표가 너무 가깝거나 경로 끝인 경우) 다음 웨이포인트를 쳐다봄
+    return world.get_curr_wpoint(1), 1
+
+
 def apply_action(world:World, action:Arr):
     ws, ad = action
     ws = float(ws)
