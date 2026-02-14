@@ -67,14 +67,16 @@ def get_path_features(world:World) -> list[float]:
     z0 = world.player.z
     a0 = world.player.angle_x
 
-    # 각 목표점의 거리, 각도 정보
-    for index in range(
-            world.waypoint_idx,
-            world.waypoint_idx + LOOKAHEAD_POINTS
-        ):
-        # 이전 목표점 기준
-        if index < world.path_len:
-            x1, z1 = world.waypoints[index]
+    min_ld = 1.0
+    ld_k = 1.0
+    ld = min_ld + ld_k * max(0, world.player.speed)
+    (x1, z1), index_rel = get_pp_lookahead_point(world, ld)
+
+    # 각 목표점의 거리, 각도 정보(이전 목표점 기준)
+    for i in range(LOOKAHEAD_POINTS):
+        if world.waypoint_idx + index_rel + i < world.path_len:
+            if i != 0:
+                x1, z1 = world.get_curr_wpoint(index_rel + i)
             d_from_prev = distance_of(x0, z0, x1, z1)
             a1          = angle_of(x0, z0, x1, z1)
             a_from_prev = a1 - a0
