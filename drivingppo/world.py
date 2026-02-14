@@ -434,7 +434,14 @@ class World:
 
         ray_num = config.get('lidar_raynum', LIDAR_NUM)
 
-        self.near:float = config.get('near',  2.5)  # 목표점과의 거리가 이보다 작으면 도착 판정
+        wphitting_method = config.get('wphitting_method', 'pass')  # 목표점 도달 판정 방법
+        if wphitting_method == 'near':  # 범위 내에 들기만 하면
+            self.check_wphitting = self.__check_wphitting_near
+        elif wphitting_method == 'pass':  # 범위 내에서, 멀어지는 방향으로 진행
+            self.check_wphitting = self.__check_wphitting_pass
+        else:
+            raise ValueError('invalid wphitting_method', wphitting_method)
+        self.near:float = config.get('near',  5.0)  # 목표점과의 거리가 이보다 작으면 도착 판정
         self.far:float  = config.get('far',  12.0)  # 목표점과의 거리가 이보다 크면 길잃음 판정
         self.map_border = config.get('map_border', True)  # 맵 경계와 부딪힌다고 판정
         self.skip_past_waypoints:bool = config.get('skip_past_waypoints', False)  # 현재로부터 가장 가까운 waypoint로 건너뜀.
@@ -615,12 +622,8 @@ class World:
         while True:
             if self.arrived:
                 break
-            distance = self.get_distance_to_wpoint()
-            angle    = self.get_relative_angle_to_wpoint()
-            if distance < 1.0 \
-            or distance < self.near and  math.cos(angle) * self.player.speed < 0:  # 일정 거리 이내에서 멀어지는 방향이 되는 순간
+            if self.check_wphitting():
                 result_wpoint = True
-                self.next_wpoint()
             else:
                 break
 
@@ -638,6 +641,24 @@ class World:
         if callback: callback(self)
 
         return result_p, result_collision, result_wpoint
+
+    def __check_wphitting_pass(self) -> bool:
+        '''목표점 도달 판정'''
+        distance = self.get_distance_to_wpoint()
+        angle    = self.get_relative_angle_to_wpoint()
+        if distance < 1.0 \
+        or distance < self.near and  math.cos(angle) * self.player.speed < 0:  # 일정 거리 이내에서 멀어지는 방향이 되는 순간
+            self.next_wpoint()
+            return True
+        return False
+
+    def __check_wphitting_near(self) -> bool:
+        '''목표점 도달 판정'''
+        distance = self.get_distance_to_wpoint()
+        if distance < self.near:
+            self.next_wpoint()
+            return True
+        return False
 
 
     def control(self, dt):
