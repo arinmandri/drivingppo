@@ -42,8 +42,8 @@ CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 �
 
 def gen_0():  return generate_random_world_plain(map_h= 50, map_w= 50, num=1,                min_dist=6,  max_dist=10, ang_init='half', ang_lim=0,      spd_init=0)
 def gen_1():  return generate_random_world_plain(map_h=150, map_w=150, num=3,                min_dist=6,  max_dist=20, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
-def gen_2():  return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=6,  max_dist=45, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
-def gen_2l(): return generate_random_world_plain(map_h=150, map_w=150, num=20,               min_dist=6,  max_dist=45, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
+def gen_2():  return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=6,  max_dist=30, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
+def gen_2l(): return generate_random_world_plain(map_h=150, map_w=150, num=20,               min_dist=6,  max_dist=30, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
 def gen_obs():
     if randint(0, 1):
         choice = randint(0, 5)
@@ -472,7 +472,7 @@ def generate_random_waypoints(
         waypoints.append((x, z))
 
         # 랜덤 각도: 이전 각도에서 일정 이내로만 변화를 제한
-        angle_d = np.clip(np.random.normal(0, angle_change_limit/pi, 1), -angle_change_limit, angle_change_limit)
+        angle_d = get_random_angle(angle_change_limit)
         angle = angle_of(last_x, last_z, x, z) + angle_d
         angle = angle % pi2
 
@@ -480,6 +480,13 @@ def generate_random_waypoints(
         last_z = z
 
     return waypoints
+
+
+def get_random_angle(a: float) -> float:
+    b = np.random.normal(0, a/pi*2, 1)
+    while b < -a or a < b:
+        b = np.random.normal(0, a/pi*2, 1)
+    return float(b)
 
 
 
