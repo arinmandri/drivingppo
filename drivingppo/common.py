@@ -3,7 +3,8 @@ import numpy as np
 import torch
 
 SPEED_MAX_W:float = 19.44
-SPD_MAX_STD = 10.0
+SPD_SCFAC = 10.0
+DIS_SCFAC = 30.0
 
 # 기본 맵 크기 (Tank Challenge)
 MAP_W = 300

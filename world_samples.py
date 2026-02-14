@@ -10,7 +10,7 @@ from random import randint
 
 from drivingppo.common import LOOKAHEAD_POINTS, LIDAR_NUM, LIDAR_RANGE, LIDAR_START, LIDAR_END
 from drivingppo.world import World, Car, OBSTACLE_VALUE, create_empty_map, angle_of, distance_of, pi, pi2, rad_to_deg
-from drivingppo.environment import SPD_MAX_STD
+from drivingppo.environment import SPD_SCFAC
 
 MAP_W = 150
 MAP_H = 150
@@ -98,7 +98,7 @@ def generate_random_world_plain(
                    pangle_x+pi                 if ang_init == 'inv'   else \
                    ang_init
 
-    pspeed = np.random.uniform(-SPD_MAX_STD, SPD_MAX_STD)*0.5  if spd_init == 'rand'  else spd_init
+    pspeed = np.random.uniform(-SPD_SCFAC, SPD_SCFAC)*0.5  if spd_init == 'rand'  else spd_init
 
 
     # 목표점 생성

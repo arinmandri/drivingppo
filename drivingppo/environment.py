@@ -8,7 +8,8 @@ from datetime import datetime
 from .world import World, distance_of, angle_of, pi, pi2, rad_to_deg
 from .simsim import WorldViewer
 from .common import (
-    SPD_MAX_STD,
+    SPD_SCFAC,
+    DIS_SCFAC,
     WORLD_DT,
     ACTION_REPEAT,
     LOOKAHEAD_POINTS,
@@ -53,7 +54,7 @@ def get_state(world:World):
     return observation
 
 def speed_norm(speed):
-    return speed / SPD_MAX_STD
+    return speed / SPD_SCFAC
 
 def get_path_features(world:World) -> list[float]:
     """
@@ -134,7 +135,7 @@ def distance_score_near(x:float) -> float:
     return max(0, _distance_score_near(x) - distance_score_near_base)
 
 def distance_score_far(x:float) -> float:
-    return x / 30.0
+    return x / DIS_SCFAC
 
 
 def apply_action(world:World, action:Arr):
