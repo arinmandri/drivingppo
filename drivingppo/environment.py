@@ -424,8 +424,8 @@ class WorldEnv(gym.Env):
             reward_progress    = - distance_d * 0.2
             if s_norm < 0: reward_progress = min(0.0, reward_progress)
             reward_orientation = cos_nx * 0.2
-            reward_action_ws   = - ws * s_norm * 4.0  if ws * s_norm > 0  else 0.0  # 브레이크 사용시 비용 없다 침.
-            reward_action_ad   = - ad * ad * 1.7
+            reward_action_ws   = 0.0#- ws * s_norm * 4.0  if ws * s_norm > 0  else 0.0  # 브레이크 사용시 비용 없다 침.
+            reward_action_ad   = 0.0#- ad * ad * 1.7
             danger             = - ld_max_1 * 0.6
             danger_d           = - ld_max_d * 80.0
             total = reward_time + reward_progress + reward_action_ws + reward_action_ad + danger + danger_d
