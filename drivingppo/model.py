@@ -47,10 +47,36 @@ class NoFeaturesExtractor(BaseFeaturesExtractor):
         return observations
 
 
+class P2FeaturesExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Box):
+
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * 8
+
+        super(P2FeaturesExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+
+        self.layer1 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=1,
+                out_channels=8,
+                kernel_size=EACH_POINT_INFO_SIZE,
+                stride=EACH_POINT_INFO_SIZE,
+                padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed           = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
+        path_data       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        path_output = self.layer1(path_data.unsqueeze(1))
+
+        return torch.cat((speed, path_output), dim=1)
+
+
 class MyFeatureExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
-        self.cascade_hidden_dim = 16
         feature1_dim = 64
         feature2_dim = 128
         total_feature_dim = 1 + OBSERVATION_DIM_WPOINT + feature1_dim + feature2_dim
@@ -136,7 +162,7 @@ def train_start(
     vec_env = make_vec_env(gen_env, n_envs=1, vec_env_cls=vec_env_cls, seed=seed)# n_envs: 병렬 환경 수
 
     policy_kwargs = dict(
-        features_extractor_class=NoFeaturesExtractor,
+        features_extractor_class=P2FeaturesExtractor,
         features_extractor_kwargs=dict(),
         net_arch=dict(
             pi=[512, 512], # Actor

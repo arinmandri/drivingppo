@@ -22,6 +22,7 @@ W_CONFIG = {
     # 'lidar_range':  LIDAR_RANGE,
     # 'angle_start':  LIDAR_START,
     # 'angle_end':    LIDAR_END,
+    'wphitting_method': 'near',
     'map_border': True,
     'near': NEAR,
     'far': 999.9,
@@ -40,7 +41,7 @@ CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 �
 벽 앞에서 가만히 있기를 택하지 않도록; 시간초과 벌점을 충돌만큼 부여.
 """
 
-def gen_0():  return generate_random_world_plain(map_h=100, map_w=100, num=1,                min_dist=30, max_dist=30, ang_init='half', ang_lim=0,      spd_init=0)
+def gen_0():  return generate_random_world_plain(map_h=100, map_w=100, num=1,                min_dist=6,  max_dist=10, ang_init='half', ang_lim=0,      spd_init=0)
 def gen_1():  return generate_random_world_plain(map_h=150, map_w=150, num=3,                min_dist=6,  max_dist=20, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
 def gen_2():  return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=6,  max_dist=30, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
 def gen_2l(): return generate_random_world_plain(map_h=150, map_w=150, num=10,               min_dist=6,  max_dist=30, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
@@ -483,9 +484,9 @@ def generate_random_waypoints(
 
 
 def get_random_angle(a: float) -> float:
-    b = np.random.normal(0, a/pi*2, 1)
+    b = np.random.normal(0, a/pi, 1)
     while b < -a or a < b:
-        b = np.random.normal(0, a/pi*2, 1)
+        b = np.random.normal(0, a/pi, 1)
     return float(b)
 
 
