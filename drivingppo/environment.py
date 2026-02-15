@@ -68,22 +68,18 @@ def get_path_features(world:World) -> list[float]:
     a0 = world.player.angle_x
 
     # 각 목표점의 거리, 각도 정보
-    for index in range(
-            world.waypoint_idx,
-            world.waypoint_idx + LOOKAHEAD_POINTS
-        ):
+    for index_rel in range(LOOKAHEAD_POINTS):
         # 이전 목표점 기준
-        if index < world.path_len:
-            x1, z1 = world.waypoints[index]
-            d_from_prev = distance_of(x0, z0, x1, z1)
+        x1, z1 = world.get_curr_wpoint(index_rel)
+        d_from_prev = distance_of(x0, z0, x1, z1)
+        if d_from_prev == 0:
+            a_from_prev = 0
+        else:
             a1          = angle_of(x0, z0, x1, z1)
             a_from_prev = a1 - a0
-            x0 = x1
-            z0 = z1
             a0 = a1
-        else:
-            d_from_prev = 0.0
-            a_from_prev = 0.0
+        x0 = x1
+        z0 = z1
 
         a_fp_norm = ((a_from_prev + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
         d_near = distance_score_near(d_from_prev)  # 거리 가까운 정도
@@ -91,18 +87,13 @@ def get_path_features(world:World) -> list[float]:
 
         path_data.extend([a_fp_norm, math.cos(a_fp_norm), d_near, d_far])
 
-    # # 각 목표점의 거리, 각도 정보
-    # for _ in range(LOOKAHEAD_POINTS):
-
-    #     # 에이전트 기준
-    #     d_from_agnt = world.get_distance_to_wpoint()
-    #     a_from_agnt = world.get_relative_angle_to_wpoint()
-
-    #     a_fp_norm = ((a_from_agnt + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
-    #     d_near = distance_score_near(d_from_agnt)  # 거리 가까운 정도
-    #     d_far  = distance_score_far(d_from_agnt)   # 거리 먼 정도
-
-    #     path_data.extend([a_fp_norm, math.cos(a_fp_norm), d_near, d_far])
+        # # 에이전트 기준
+        # d_from_agnt = world.get_distance_to_wpoint()
+        # a_from_agnt = world.get_relative_angle_to_wpoint()
+        # a_fp_norm = ((a_from_agnt + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
+        # d_near = distance_score_near(d_from_agnt)  # 거리 가까운 정도
+        # d_far  = distance_score_far(d_from_agnt)   # 거리 먼 정도
+        # path_data.extend([a_fp_norm, math.cos(a_fp_norm), d_near, d_far])
 
     return path_data
 
