@@ -33,10 +33,7 @@ def angle_of(x0, z0, x1, z1):
     """
     dx = x1 - x0
     dz = z1 - z0
-
-    absolute_angle = pi/2 - math.atan2(dz, dx)
-
-    return absolute_angle
+    return math.atan2(dx, dz)
 
 def distance_of(x0:float, z0:float, x1:float, z1:float):
     return math.hypot(x0-x1, z0-z1)
