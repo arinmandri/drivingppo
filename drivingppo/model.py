@@ -422,12 +422,13 @@ def evaluate(
                 if i1 % checkPeriod == 0:
                     if verbose: print(f"[{i1}/{episode_num}] 완료 - Reward: {total_reward:.2f}, Steps: {esteps}")
 
-    if verbose: 
+    # 평가 결과 출력 및 저장
+    if verbose:
         print("\n" + "="*41)
         print(f"평가 결과 ({episode_num} 에피소드 평균)")
         print("="*41)
         print(f"Total Reward  : {np.mean(episode_rewards):.2f} ± {np.std(episode_rewards):.2f}")
-        print(f"Episode Length: {np.mean(episode_lengths):.1f}")
+        print(f"Episode Length: {np.mean(episode_lengths):.1f} ± {np.std(episode_lengths):.2f}")
 
     if all_metrics:
         df_metrics = pd.DataFrame(all_metrics)
@@ -456,7 +457,7 @@ def evaluate(
         # CSV 저장
         if csv_path:
             df_metrics.to_csv(csv_path, index=False)
-            if verbose: 
+            if verbose:
                 print(f"\n💾 세부 결과 저장됨: {csv_path}")
             if verbose: print(f"\n세부 결과가 저장: {csv_path}")
     else:
