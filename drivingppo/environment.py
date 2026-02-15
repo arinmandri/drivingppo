@@ -85,7 +85,7 @@ def get_path_features(world:World) -> list[float]:
         d_near = distance_score_near(d_from_prev)  # 거리 가까운 정도
         d_far  = distance_score_far(d_from_prev)   # 거리 먼 정도
 
-        path_data.extend([a_fp_norm, math.cos(a_fp_norm), d_near, d_far])
+        path_data.extend([a_fp_norm, math.cos(a_from_prev), d_near, d_far])
 
         # # 에이전트 기준
         # d_from_agnt = world.get_distance_to_wpoint()
@@ -93,7 +93,7 @@ def get_path_features(world:World) -> list[float]:
         # a_fp_norm = ((a_from_agnt + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
         # d_near = distance_score_near(d_from_agnt)  # 거리 가까운 정도
         # d_far  = distance_score_far(d_from_agnt)   # 거리 먼 정도
-        # path_data.extend([a_fp_norm, math.cos(a_fp_norm), d_near, d_far])
+        # path_data.extend([a_fp_norm, math.cos(a_from_agnt), d_near, d_far])
 
     return path_data
 
