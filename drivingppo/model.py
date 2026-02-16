@@ -132,6 +132,15 @@ class TensorboardCallback(BaseCallback):
         return True
 
 
+def linear_schedule(initial_value: float) -> Callable[[float], float]:
+    """
+    학습 진행도에 따라 학습률을 선형으로 감소시키는 스케줄러.
+    """
+    def func(progress_remaining: float) -> float:
+        return progress_remaining * initial_value
+    return func
+
+
 def train_start(
         gen_env:Callable[[], WorldEnv],
         steps:int=0,  # 0: 학습 없이 생성만 된 모델 반환.
@@ -143,9 +152,9 @@ def train_start(
         n_steps=512,
         batch_size=256,
         vec_env:Literal['dummy', 'subp']|VecEnv='dummy',
-        lr=3e-4,
+        lr:float|Callable[[float], float]=3e-4,
         gamma=0.9,
-        ent_coef=0.01,
+        ent_coef=0.0,
         progress_bar=True,
         seed=42
 ) -> PPO:
@@ -240,7 +249,7 @@ def train_resume(
         *,
         vec_env:Literal['dummy', 'subp']|VecEnv='dummy',
         log_std=None,
-        lr=1e-4,
+        lr:float|Callable[[float], float]=1e-4,
         gamma=0.99,
         ent_coef=0.0,
         progress_bar=True,
