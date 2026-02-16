@@ -325,21 +325,28 @@ def train_resume(
 
 
 def run(
-        world_generator:Callable[[], World],
+        world_generator:Callable[[], World]|World,
         model:PPO|str,
         time_spd=2.0,
         time_step=WORLD_DT,
         action_repeat=ACTION_REPEAT,
+        briefly=True,
         auto_close_at_end=True,
     ):
     """
     모델 시각적 확인용 실행
     """
+    if isinstance(world_generator, Callable):
+        wgen = world_generator
+    elif isinstance(world_generator, World):
+        wgen = lambda: world_generator
+    else:
+        raise ValueError()
 
     env = WorldEnv(
-        world_generator=world_generator,
+        world_generator=wgen,
         time_step=time_step,
-        action_repeat=1,
+        action_repeat=action_repeat  if briefly  else 1,
         render_mode='debug',
         auto_close_at_end=auto_close_at_end
     )
@@ -356,7 +363,7 @@ def run(
     while not terminated and not truncated:
 
         action, _ = model.predict(obs, deterministic=True)  # 에이전트가 행동 선택
-        for _ in range(action_repeat):
+        for _ in range(1  if briefly  else action_repeat):
             obs, reward, terminated, truncated, info = env.step(action)  # 행동 실행
             episode_reward += reward
             env.render()  # 시각화 호출
