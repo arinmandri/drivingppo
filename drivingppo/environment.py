@@ -175,7 +175,7 @@ def get_pp_lookahead_point(world:World, ld:float):
         return lookahead_point, i
 
     # 교차점을 못 찾았다면 (목표가 너무 가깝거나 경로 끝인 경우) 다음 웨이포인트를 쳐다봄
-    return world.get_curr_wpoint(1), 1
+    return world.get_curr_wpoint(0), 0
 
 
 def apply_action(world:World, action:Arr):
