@@ -8,7 +8,7 @@ import numpy as np
 from numpy import ndarray as Arr
 from random import randint
 
-from drivingppo.common import set_seed, LOOKAHEAD_POINTS, LIDAR_NUM, LIDAR_RANGE, LIDAR_START, LIDAR_END
+from drivingppo.common import set_seed, DIS_SCFAC, LOOKAHEAD_POINTS, LIDAR_NUM, LIDAR_RANGE, LIDAR_START, LIDAR_END
 from drivingppo.world import World, Car, OBSTACLE_VALUE, create_empty_map, angle_of, distance_of, pi, pi2, rad_to_deg
 from drivingppo.environment import SPD_SCFAC
 
@@ -29,11 +29,12 @@ W_CONFIG = {
 }
 CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.  # 에이전트 대각선길이의 반  (1.5, 3)-->1.68
 
-def gen_0():  return generate_random_world_plain(map_h=100, map_w=100, num=1,                min_dist=15,      max_dist=20, ang_init='half', ang_lim=0,      spd_init=0,      near=2)
-def gen_1():  return generate_random_world_plain(map_h=150, map_w=150, num=3,                min_dist=6,       max_dist=20, ang_init='rand', ang_lim=pi*1.0, spd_init='rand', near=3)
-def gen_2():  return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2,  max_dist=30, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
-def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2,  max_dist=30, ang_init='rand', ang_lim=pi*1.0, spd_init='rand', near=NEAR-1)  # 학습용: 도달판정범위 약간 작게
-def gen_2l(): return generate_random_world_plain(map_h=300, map_w=300, num=10,               min_dist=NEAR*2,  max_dist=30, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')               # 테스트용: 같은 패턴인데 좀 긴 경로
+def gen_0():  return generate_random_world_plain(map_h=100, map_w=100, num=1,                min_dist=15,     max_dist=20,        ang_init='half', ang_lim=0,      spd_init=0,      near=2)
+def gen_1():  return generate_random_world_plain(map_h=150, map_w=150, num=2,                min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
+def gen_1t(): return generate_random_world_plain(map_h=150, map_w=150, num=2,                min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_init='rand', ang_lim=pi*1.0, spd_init='rand', near=NEAR-0.5)  # 학습용: 도달판정범위 약간 작게
+def gen_2():  return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
+def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_init='rand', ang_lim=pi*1.0, spd_init='rand', near=NEAR-0.5)
+def gen_2l(): return generate_random_world_plain(map_h=300, map_w=300, num=10,               min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')  # 테스트용: 같은 패턴인데 좀 긴 경로
 def gen_from(gen:Callable[[], World], seed, n):
     """seed 시드로 gen을 n번째 호출했을 때 생성되는 맵 반환"""
     set_seed(seed)
@@ -65,7 +66,7 @@ def generate_random_world_plain(
         map_h=MAP_H,
         num=15,
         min_dist=NEAR*2,
-        max_dist=20,
+        max_dist=20.0,
         ang_init:float|Literal['p', 'half', 'rand', 'inv']='p',
         ang_lim=pi*0.5,
         pos_init:Literal['corner', 'center']='center',
