@@ -377,10 +377,10 @@ class WorldEnv(gym.Env):
             # 액션 분산
             if len(self.action_history) > 0:
                 action_arr = np.array(self.action_history)
-                ws_var = float(np.var(action_arr[:, 0]))
-                ad_var = float(np.var(action_arr[:, 1]))
+                ws_diff_mean = float(np.mean(np.abs(np.diff(action_arr[:, 0]))))  if len(self.action_history) > 1  else 0.0
+                ad_sq_mean   = float(np.mean(np.square(action_arr[:, 1])))
             else:
-                ws_var, ad_var = 0.0, 0.0
+                ws_diff_mean, ad_sq_mean = 0.0, 0.0
 
             if len(self.speed_history) > 0:
                 speed_arr = np.array(self.speed_history)
@@ -408,8 +408,8 @@ class WorldEnv(gym.Env):
                 'rewards/7.ad':          self.reward_totals[7]/tcount,
                 'rewards/8.danger':      self.reward_totals[8]/tcount,
                 'rewards/9.danger_d':    self.reward_totals[9]/tcount,
-                'metrics/ws_var':        ws_var,
-                'metrics/ad_var':        ad_var,
+                'metrics/ws_diff_mean':  ws_diff_mean,
+                'metrics/ad_sq_mean':    ad_sq_mean,
                 'metrics/speed_mean':    speed_mean,
                 'metrics/speed_var':     speed_var,
             }
