@@ -208,6 +208,7 @@ class WorldEnv(gym.Env):
         super().__init__()
         self.closed = False
 
+        self.estep_count = 0
         self.time_step = time_step  # 월드의 1스텝당 흐르는 시간(천분초)
         self.action_repeat = action_repeat  # 조작값 변경은 월드의 n스텝마다 한 번. Tank Challenge에서도 FPS는 30이어도 API 요청은 최소 0.1초마다 한 번으로 설정 가능하다.
         self.max_time = max_time  # 최대 에피소드 길이(천분초)

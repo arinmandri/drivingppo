@@ -47,12 +47,12 @@ class NoFeaturesExtractor(BaseFeaturesExtractor):
         return observations
 
 
-class P2FeaturesExtractor(BaseFeaturesExtractor):
+class SharedWpFeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
         total_feature_dim = 1 + LOOKAHEAD_POINTS * 8
 
-        super(P2FeaturesExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+        super(SharedWpFeaturesExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
 
         self.layer1 = nn.Sequential(
             nn.Conv1d(
@@ -171,7 +171,7 @@ def train_start(
     vec_env = make_vec_env(gen_env, n_envs=1, vec_env_cls=vec_env_cls, seed=seed)# n_envs: 병렬 환경 수
 
     policy_kwargs = dict(
-        features_extractor_class=P2FeaturesExtractor,
+        features_extractor_class=SharedWpFeaturesExtractor,
         features_extractor_kwargs=dict(),
         net_arch=dict(
             pi=[512, 512], # Actor
@@ -317,7 +317,7 @@ def train_resume(
         model.save(CHECKPOINT_DIR+save_path)
         print(f"=== 학습 완료 ({model.num_timesteps} 스텝): {CHECKPOINT_DIR+save_path} ===")
 
-    # 임시 파일 삭제 로직
+    # 임시 파일 삭제
     if is_temp_file:
         temp_file_path = CHECKPOINT_DIR + model_loading_path + ".zip"
         if os.path.exists(temp_file_path):
