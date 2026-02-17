@@ -199,13 +199,6 @@ def train_start(
         device="auto"  # GPU 사용 설정
     )
 
-    if steps <= 0:
-        # 학습 없이 모델 바로 반환
-        print("=== PPO 모델 생성 ===")
-        if save_path:
-            model.save(CHECKPOINT_DIR+save_path)
-        return model
-
     # 콜백
     callbacks:list[BaseCallback] = [TensorboardCallback()]  # 요소별 점수
     if save_freq:
@@ -219,13 +212,14 @@ def train_start(
 
     print("=== PPO 학습 시작 ===")
 
-    model.learn(
-        total_timesteps=steps,
-        callback=callbacks,
-        tb_log_name=run_name,
-        log_interval=10,
-        progress_bar=progress_bar,
-    )
+    if steps > 0:
+        model.learn(
+            total_timesteps=steps,
+            callback=callbacks,
+            tb_log_name=run_name,
+            log_interval=10,
+            progress_bar=progress_bar,
+        )
 
     # 최종 모델 저장
     if save_path:
@@ -307,15 +301,16 @@ def train_resume(
 
     print(f"=== 학습 재개 (현재 스텝: {model.num_timesteps} / 목표: {steps + model.num_timesteps} / 남은: {steps}) ===")
 
-    model.learn(
-        total_timesteps=steps,
-        callback=callbacks,
-        tb_log_name=run_name,
-        log_interval=10,
-        progress_bar=progress_bar,
+    if steps > 0:
+        model.learn(
+            total_timesteps=steps,
+            callback=callbacks,
+            tb_log_name=run_name,
+            log_interval=10,
+            progress_bar=progress_bar,
 
-        reset_num_timesteps=reset_num_timesteps # 내부 타임스텝 카운터 초기화 여부
-    )
+            reset_num_timesteps=reset_num_timesteps # 내부 타임스텝 카운터 초기화 여부
+        )
 
     # 최종 모델 저장
     if save_path:
