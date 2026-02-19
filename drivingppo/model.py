@@ -233,7 +233,7 @@ def train_start(
         vec_env,
         policy_kwargs=policy_kwargs,
 
-        verbose=1,
+        verbose=0,
         tensorboard_log=LOG_DIR  if tb_log  else None,
 
         # 학습 하이퍼파라미터
@@ -322,7 +322,7 @@ def train_resume(
     model = PPO.load(
         path=CHECKPOINT_DIR+model_loading_path,
         env=vec_env,
-        verbose=1,
+        verbose=0,
         tensorboard_log=LOG_DIR  if tb_log  else None,
 
         learning_rate=lr,
