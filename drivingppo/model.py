@@ -48,13 +48,11 @@ class NoFeaturesExtractor(BaseFeaturesExtractor):
 
 
 class VMLPFeaturesExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Box):
-        total_feature_dim = 1 + LOOKAHEAD_POINTS * EACH_POINT_INFO_SIZE * 16
-
-        super(VMLPFeaturesExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+    def __init__(self, observation_space: gym.spaces.Box, output_dim=256):
+        super(VMLPFeaturesExtractor, self).__init__(observation_space, features_dim=output_dim)
 
         self.layer = nn.Sequential(
-            nn.Linear(OBSERVATION_DIM, total_feature_dim),
+            nn.Linear(OBSERVATION_DIM, output_dim),
             nn.ReLU(),
         )
 
@@ -63,46 +61,18 @@ class VMLPFeaturesExtractor(BaseFeaturesExtractor):
         return output
 
 
-class Shwp208FeaturesExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Box):
+class ShwpFeaturesExtractor(BaseFeaturesExtractor):
 
-        total_feature_dim = 1 + LOOKAHEAD_POINTS * 8
+    def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=16):
 
-        super(Shwp208FeaturesExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * conv_out_channels
 
-        self.layer1 = nn.Sequential(
-            nn.Conv1d(
-                in_channels=1,
-                out_channels=8,
-                kernel_size=EACH_POINT_INFO_SIZE * 2,
-                stride=EACH_POINT_INFO_SIZE,
-                padding=0),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
-
-    def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        speed           = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
-        wp_data_0       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_1]
-        path_data       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
-
-        path_input_data = torch.cat((wp_data_0, path_data), dim=1)
-        path_output = self.layer1(path_input_data.unsqueeze(1))
-
-        return torch.cat((speed, path_output), dim=1)
-
-
-class Shwp216FeaturesExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Box):
-
-        total_feature_dim = 1 + LOOKAHEAD_POINTS * 16
-
-        super(Shwp216FeaturesExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+        super().__init__(observation_space, features_dim=total_feature_dim)
 
         self.layer1 = nn.Sequential(
             nn.Conv1d(
                 in_channels=1,
-                out_channels=16,
+                out_channels=conv_out_channels,
                 kernel_size=EACH_POINT_INFO_SIZE * 2,
                 stride=EACH_POINT_INFO_SIZE,
                 padding=0),
