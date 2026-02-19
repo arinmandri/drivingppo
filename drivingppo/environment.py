@@ -195,7 +195,7 @@ class WorldEnv(gym.Env):
     """
 
     def __init__(self,
-                 world_generator:Callable[[], World],
+                 world_generator:Callable[[], World]=World,
                  max_time=120_000,
                  time_step=WORLD_DT,
                  action_repeat=ACTION_REPEAT,
