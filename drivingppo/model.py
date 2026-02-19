@@ -74,6 +74,35 @@ class SharedWpFeaturesExtractor(BaseFeaturesExtractor):
         return torch.cat((speed, path_output), dim=1)
 
 
+class Shwp216FeaturesExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Box):
+
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * 16
+
+        super(Shwp216FeaturesExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+
+        self.layer1 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=1,
+                out_channels=16,
+                kernel_size=EACH_POINT_INFO_SIZE * 2,
+                stride=EACH_POINT_INFO_SIZE,
+                padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed           = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
+        wp_data_0       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_1]
+        path_data       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        path_input_data = torch.cat((wp_data_0, path_data), dim=1)
+        path_output = self.layer1(path_input_data.unsqueeze(1))
+
+        return torch.cat((speed, path_output), dim=1)
+
+
 class MyFeatureExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
