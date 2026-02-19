@@ -143,6 +143,14 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
 
 def train_start(
         gen_env:Callable[[], WorldEnv],
+        policy_kwargs=dict(
+            features_extractor_class=NoFeaturesExtractor,
+            features_extractor_kwargs=dict(),
+            net_arch=dict(
+                pi=[512, 512], # Actor
+                vf=[512, 512, 256]  # Critic
+            )
+        ),
         steps:int=0,  # 0: 학습 없이 생성만 된 모델 반환.
         save_path:str|None=None,
         save_freq:int=0,
@@ -170,14 +178,6 @@ def train_start(
         raise Exception(f'unknown vec_env: {vec_env}')
     vec_env = make_vec_env(gen_env, n_envs=1, vec_env_cls=vec_env_cls, seed=seed)# n_envs: 병렬 환경 수
 
-    policy_kwargs = dict(
-        features_extractor_class=SharedWpFeaturesExtractor,
-        features_extractor_kwargs=dict(),
-        net_arch=dict(
-            pi=[512, 512], # Actor
-            vf=[512, 512, 256]  # Critic
-        )
-    )
     print('POLICY:', policy_kwargs)
 
     # PPO 모델
