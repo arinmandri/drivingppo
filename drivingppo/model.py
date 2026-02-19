@@ -63,6 +63,35 @@ class VMLPFeaturesExtractor(BaseFeaturesExtractor):
         return output
 
 
+class Shwp208FeaturesExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Box):
+
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * 8
+
+        super(Shwp208FeaturesExtractor, self).__init__(observation_space, features_dim=total_feature_dim)
+
+        self.layer1 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=1,
+                out_channels=8,
+                kernel_size=EACH_POINT_INFO_SIZE * 2,
+                stride=EACH_POINT_INFO_SIZE,
+                padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed           = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
+        wp_data_0       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_1]
+        path_data       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        path_input_data = torch.cat((wp_data_0, path_data), dim=1)
+        path_output = self.layer1(path_input_data.unsqueeze(1))
+
+        return torch.cat((speed, path_output), dim=1)
+
+
 class Shwp216FeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box):
 
@@ -150,12 +179,12 @@ class TensorboardCallback(BaseCallback):
         return True
 
 
-def linear_schedule(initial_value: float) -> Callable[[float], float]:
+def linear_schedule(start:float, end:float=0.0) -> Callable[[float], float]:
     """
     학습 진행도에 따라 학습률을 선형으로 감소시키는 스케줄러.
     """
     def func(progress_remaining: float) -> float:
-        return progress_remaining * initial_value
+        return (progress_remaining * (start - end)) + end
     return func
 
 
