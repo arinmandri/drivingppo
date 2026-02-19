@@ -489,9 +489,9 @@ def generate_random_waypoints(
 
 
 def get_random_angle(a: float) -> float:
-    b = np.random.normal(0, a/pi, 1)
+    b = np.random.normal(0, a/pi*1.2, 1)
     while b < -a or a < b:
-        b = np.random.normal(0, a/pi, 1)
+        b = np.random.normal(0, a/pi*1.2, 1)
     return float(b)
 
 
