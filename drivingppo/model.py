@@ -61,7 +61,7 @@ class VMLPFeaturesExtractor(BaseFeaturesExtractor):
         return output
 
 
-class ShwpFeaturesExtractor(BaseFeaturesExtractor):
+class Shwp0FeaturesExtractor(BaseFeaturesExtractor):
 
     def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=16):
 
@@ -81,11 +81,13 @@ class ShwpFeaturesExtractor(BaseFeaturesExtractor):
         )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        speed           = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
-        wp_data_0       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_1]
-        path_data       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+        batch_size = observations.shape[0]
 
-        path_input_data = torch.cat((wp_data_0, path_data), dim=1)
+        speed           = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
+        path_data       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+        path_data_0     = observations.new_tensor([[0.0, 1.0, 1.0, 0.0]]).expand(batch_size, -1)  # 첫번째 웨이포인트와 결합될 영점(에이전트중심에서 표현된 에이전트)
+
+        path_input_data = torch.cat((path_data_0, path_data), dim=1)
         path_output = self.layer1(path_input_data.unsqueeze(1))
 
         return torch.cat((speed, path_output), dim=1)
