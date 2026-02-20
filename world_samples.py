@@ -35,6 +35,7 @@ def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=2,   
 def gen_3():  return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')
 def gen_3t(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_init='rand', ang_lim=pi*1.0, spd_init='rand', near=NEAR-0.5)
 def gen_3l(): return generate_random_world_plain(map_h=300, map_w=300, num=10,               min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_init='rand', ang_lim=pi*1.0, spd_init='rand')  # 테스트용: 같은 패턴인데 좀 긴 경로
+def gen_3lt():return generate_random_world_plain(map_h=300, map_w=300, num=20,               min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_init='rand', ang_lim=pi*1.0, spd_init='rand', near=NEAR-0.5)
 def gen_from(gen:Callable[[], World], seed, n):
     """seed 시드로 gen을 n번째 호출했을 때 생성되는 맵 반환"""
     set_seed(seed)
