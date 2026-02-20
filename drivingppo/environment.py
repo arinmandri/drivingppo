@@ -56,7 +56,7 @@ def get_state(world:World):
 def speed_norm(speed):
     return speed / SPD_SCFAC
 
-def get_path_features(world:World) -> list[float]:
+def get_path_features_srel(world:World) -> list[float]:
     """
     경로 정보
     바로 앞의 점 몇 개의 거리와 각도.
@@ -87,15 +87,26 @@ def get_path_features(world:World) -> list[float]:
 
         path_data.extend([a_fp_norm, math.cos(a_from_prev), d_near, d_far])
 
-        # # 에이전트 기준
-        # d_from_agnt = world.get_distance_to_wpoint()
-        # a_from_agnt = world.get_relative_angle_to_wpoint()
-        # a_fp_norm = ((a_from_agnt + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
-        # d_near = distance_score_near(d_from_agnt)  # 거리 가까운 정도
-        # d_far  = distance_score_far(d_from_agnt)   # 거리 먼 정도
-        # path_data.extend([a_fp_norm, math.cos(a_from_agnt), d_near, d_far])
+    return path_data
+
+def get_path_features_fagnt(world:World) -> list[float]:
+    """
+    경로 정보 - 에이전트 기준
+    """
+    path_data = []
+
+    for index_rel in range(LOOKAHEAD_POINTS):
+        d_from_agnt = world.get_distance_to_wpoint(index_rel)
+        a_from_agnt = world.get_relative_angle_to_wpoint(index_rel)
+        a_fp_norm = ((a_from_agnt + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
+        d_near = distance_score_near(d_from_agnt)  # 거리 가까운 정도
+        d_far  = distance_score_far(d_from_agnt)   # 거리 먼 정도
+        path_data.extend([a_fp_norm, math.cos(a_from_agnt), d_near, d_far])
 
     return path_data
+
+get_path_features = get_path_features_srel
+
 
 def observation_str(observation):
     agent_speed       = observation[OBSERVATION_IND_SPD]
