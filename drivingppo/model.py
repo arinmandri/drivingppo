@@ -260,7 +260,7 @@ def train_resume(
         tb_log:bool=False,
         run_name:str='DPPO',
         *,
-        vec_env:Literal['dummy', 'subp']|VecEnv='dummy',
+        vec_env:Literal['dummy', 'subp']|VecEnv='subp',
         log_std=None,
         lr:float|Callable[[float], float]=1e-4,
         gamma=0.99,
