@@ -61,6 +61,34 @@ class VMLPFeaturesExtractor(BaseFeaturesExtractor):
         return output
 
 
+class Shwp1FeaturesExtractor(BaseFeaturesExtractor):
+
+    def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=8):
+
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * conv_out_channels
+
+        super().__init__(observation_space, features_dim=total_feature_dim)
+
+        self.layer1 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=1,
+                out_channels=conv_out_channels,
+                kernel_size=EACH_POINT_INFO_SIZE,
+                stride=EACH_POINT_INFO_SIZE,
+                padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed           = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
+        path_data       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        path_output = self.layer1(path_data.unsqueeze(1))
+
+        return torch.cat((speed, path_output), dim=1)
+
+
 class Shwp0FeaturesExtractor(BaseFeaturesExtractor):
 
     def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=16):
