@@ -403,14 +403,19 @@ def evaluate(
         model:PPO|str,
         world_generator:Callable[[], World],
         episode_num=100,
-        verbose:bool=True,
         csv_path:str="",
+        *,
+        time_step=WORLD_DT,
+        action_repeat=ACTION_REPEAT,
+        verbose:bool=True,
 ) -> dict:
     import numpy as np
     import pandas as pd
 
     env = WorldEnv(
         world_generator=world_generator,
+        time_step=time_step,
+        action_repeat=action_repeat,
         render_mode=None,
     )
 
