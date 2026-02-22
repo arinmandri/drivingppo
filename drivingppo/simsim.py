@@ -833,10 +833,11 @@ class WorldController(WorldViewer):
 
     def _draw(self):
         WorldViewer._draw(self)
-        text = f'tracking: {self.trackingMode}\n'\
-               f'log: {self.logMode}'
-        self.canvas.create_text(self.CANVAS_W, self.CANVAS_H/2, anchor="e",
-                                text=text, fill="black", font=("Consolas", 10), justify='right')
+        if self.viewMode:
+            text = f'tracking: {self.trackingMode}\n'\
+                f'log: {self.logMode}'
+            self.canvas.create_text(self.CANVAS_W, self.CANVAS_H/2, anchor="e",
+                                    text=text, fill="black", font=("Consolas", 10), justify='right')
 
 
 
