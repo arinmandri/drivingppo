@@ -157,15 +157,16 @@ class MyMetrics:
         # 액션 분산
         if len(self.action_history) > 0:
             action_arr = np.array(self.action_history)
-            ws_diff_mean = float(np.mean(np.abs(np.diff(action_arr[:, 0]))))  if len(self.action_history) > 1  else 0.0
-            ad_sq_mean   = float(np.mean(np.square(action_arr[:, 1])))
+            ws_diff_mean = np.mean(np.abs(np.diff(action_arr[:, 0]))).item()  if len(self.action_history) > 1  else 0.0
+            ad_sq_mean   = np.mean(np.square(action_arr[:, 1])).item()
+            brake_rate   = np.mean(action_arr[:, 0] < 0).item()
         else:
-            ws_diff_mean, ad_sq_mean = 0.0, 0.0
+            ws_diff_mean, ad_sq_mean, brake_rate = 0.0, 0.0, 0.0
 
         if len(self.speed_history) > 0:
-            speed_arr = np.array(self.speed_history)
-            speed_var = float(np.var(speed_arr))
-            speed_mean = sum(self.speed_history) / len(self.speed_history)
+            speed_arr  = np.array(self.speed_history)
+            speed_var  = np.var(speed_arr).item()
+            speed_mean = np.mean(speed_arr).item()
         else:
             speed_var = 0.0
             speed_mean = 0.0
@@ -181,5 +182,6 @@ class MyMetrics:
             "speed_mean": speed_mean,
             "speed_var": speed_var,
             "normed_path_len": normed_path_len,
+            "brake_rate": brake_rate,
         }
 
