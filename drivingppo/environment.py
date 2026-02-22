@@ -160,7 +160,7 @@ class MyMetrics:
         self.action_history.append(action)
         self.speed_history.append(world.player.speed)
 
-    def export(self):
+    def export(self) -> dict[str, float]:
         # 액션 분산
         if len(self.action_history) > 0:
             action_arr = np.array(self.action_history)
@@ -177,7 +177,12 @@ class MyMetrics:
             speed_var = 0.0
             speed_mean = 0.0
 
-        return ws_diff_mean, ad_sq_mean, speed_mean, speed_var
+        return {
+            "ws_diff_mean": ws_diff_mean,
+            "ad_sq_mean": ad_sq_mean,
+            "speed_mean": speed_mean,
+            "speed_var": speed_var,
+        }
 
 
 
@@ -367,8 +372,6 @@ class WorldEnv(gym.Env):
                 '⏰' if ending == 'timeover' else '??'
             self.print_log(f'결과{icon} 도착: {w.waypoint_idx:3d}/{w.path_len:3d} | 시간: {int(w.t_acc/1000):3d}/{int(self.time_limit/1000):3d}/{int(self.max_time/1000):3d} 초 ({int(w.t_acc/self.max_time*100):3d}%) | 위치: {int(p.x):4d}, {int(p.z):4d} ({int(p.x/self.world.MAP_W*100):3d}%, {int(p.z/self.world.MAP_H*100):3d}%)')
 
-            ws_diff_mean, ad_sq_mean, speed_mean, speed_var = self.metrics.export()
-
             tcount = self.estep_count * self.action_repeat * self.time_step / 1000.0  # 흐른 시간 (초)
 
             info['episode_metrics'] = {
@@ -387,11 +390,7 @@ class WorldEnv(gym.Env):
                 # 'rewards/7.ad':          self.reward_totals[7]/tcount,
                 # 'rewards/8.danger':      self.reward_totals[8]/tcount,
                 # 'rewards/9.danger_d':    self.reward_totals[9]/tcount,
-                'metrics/ws_diff_mean':  ws_diff_mean,
-                'metrics/ad_sq_mean':    ad_sq_mean,
-                'metrics/speed_mean':    speed_mean,
-                'metrics/speed_var':     speed_var,
-            }
+            } | self.metrics.export()
 
             self.print_result()
 
