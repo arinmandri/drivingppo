@@ -418,7 +418,7 @@ def run(
             obs, reward, terminated, truncated, info = env.step(action)  # 행동 실행
             episode_reward += reward
             env.render()  # 시각화 호출
-            time.sleep(time_step / 1000.0 / time_spd)# 시각화 프레임을 위해 딜레이 추가
+            time.sleep(time_step * action_repeat / 1000.0 / time_spd)# 시각화 프레임을 위해 딜레이 추가
             if terminated or truncated: break
 
     print(json.dumps(info, indent=4))
