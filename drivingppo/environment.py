@@ -150,6 +150,36 @@ def action_str(action):
     return f'ACTION: {action[0]:.2f}  {action[1]:.2f}'
 
 
+class MyMetrics:
+    def __init__(self, world:World):
+        self.action_history = []
+        self.speed_history = []
+        # TODO 경로길이로...
+
+    def step(self, action, world:World):
+        self.action_history.append(action)
+        self.speed_history.append(world.player.speed)
+
+    def export(self):
+        # 액션 분산
+        if len(self.action_history) > 0:
+            action_arr = np.array(self.action_history)
+            ws_diff_mean = float(np.mean(np.abs(np.diff(action_arr[:, 0]))))  if len(self.action_history) > 1  else 0.0
+            ad_sq_mean   = float(np.mean(np.square(action_arr[:, 1])))
+        else:
+            ws_diff_mean, ad_sq_mean = 0.0, 0.0
+
+        if len(self.speed_history) > 0:
+            speed_arr = np.array(self.speed_history)
+            speed_var = float(np.var(speed_arr))
+            speed_mean = sum(self.speed_history) / len(self.speed_history)
+        else:
+            speed_var = 0.0
+            speed_mean = 0.0
+
+        return ws_diff_mean, ad_sq_mean, speed_mean, speed_var
+
+
 
 class WorldEnv(gym.Env):
     """
@@ -178,7 +208,7 @@ class WorldEnv(gym.Env):
         self.time_gain_limit = time_gain_limit  # 남은 제한시간 최대량(천분초)
 
         self.collision_ending = collision_ending
-        self.tfac = action_repeat * time_step / 1000.0
+        self.tfac = action_repeat * time_step / 1000.0  # 1제어주기 (초)
 
         # Action: [A_forward, A_steer]
         self.action_space = spaces.Box(  # Forward, Steer
@@ -231,7 +261,6 @@ class WorldEnv(gym.Env):
             print(f'{self.estep_count} step -------------------------- 남은시간 {int((self.time_remaining)/1000)}')
             print(observation_str(observation0))
 
-        self.action_history.append(action)  # 매스텝 액션 기록
         ws, ad = action
         ws = float(ws)
         ad = float(ad)
@@ -276,7 +305,7 @@ class WorldEnv(gym.Env):
         ld_max_1 = observation1[OBSERVATION_IND_LIDAR_S:OBSERVATION_IND_LIDAR_E].max()  if LIDAR_NUM  else 0.0
         ld_max_d = ld_max_1 - ld_max_0
 
-        self.speed_history.append(p.speed)
+        self.metrics.step(action, w)
 
         reward_step = [0.0 for _ in range(METRIC_SIZE)]
 
@@ -311,7 +340,7 @@ class WorldEnv(gym.Env):
             # 최종 목표 도달
             if w.arrived:
                 ending = 'arrived'
-                if sum(self.speed_history) <= 0.0:  # 후진진행한 게 틀림없다.
+                if sum(self.metrics.speed_history) <= 0.0:  # 후진진행한 게 틀림없다.
                     reward_step[1] = - 300.0
                 terminated = True
 
@@ -336,21 +365,7 @@ class WorldEnv(gym.Env):
                 '⏰' if ending == 'timeover' else '??'
             self.print_log(f'결과{icon} 도착: {w.waypoint_idx:3d}/{w.path_len:3d} | 시간: {int(w.t_acc/1000):3d}/{int(self.time_limit/1000):3d}/{int(self.max_time/1000):3d} 초 ({int(w.t_acc/self.max_time*100):3d}%) | 위치: {int(p.x):4d}, {int(p.z):4d} ({int(p.x/self.world.MAP_W*100):3d}%, {int(p.z/self.world.MAP_H*100):3d}%)')
 
-            # 액션 분산
-            if len(self.action_history) > 0:
-                action_arr = np.array(self.action_history)
-                ws_diff_mean = float(np.mean(np.abs(np.diff(action_arr[:, 0]))))  if len(self.action_history) > 1  else 0.0
-                ad_sq_mean   = float(np.mean(np.square(action_arr[:, 1])))
-            else:
-                ws_diff_mean, ad_sq_mean = 0.0, 0.0
-
-            if len(self.speed_history) > 0:
-                speed_arr = np.array(self.speed_history)
-                speed_var = float(np.var(speed_arr))
-                speed_mean = sum(self.speed_history) / len(self.speed_history)
-            else:
-                speed_var = 0.0
-                speed_mean = 0.0
+            ws_diff_mean, ad_sq_mean, speed_mean, speed_var = self.metrics.export()
 
             tcount = self.estep_count * self.action_repeat * self.time_step / 1000.0  # 흐른 시간 (초)
 
@@ -423,8 +438,7 @@ class WorldEnv(gym.Env):
         self.estep_count = 0
         self.reward_totals = [0.0 for _ in range(METRIC_SIZE)]
         self.time_limit = self.time_gain_limit  # 제한시간. 목표점 도달시마다 추가 획득.
-        self.action_history = []  # 액션 기록
-        self.speed_history = []
+        self.metrics = MyMetrics(w)
 
         observation = self.observation
         info = {}
