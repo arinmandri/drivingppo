@@ -385,6 +385,7 @@ def evaluate(
         *,
         time_step=WORLD_DT,
         action_repeat=ACTION_REPEAT,
+        print_result:bool=True,
         verbose:bool=True,
 ) -> dict:
     import numpy as np
@@ -436,8 +437,8 @@ def evaluate(
                     if verbose: print(f"[{i1}/{episode_num}] 완료 - Reward: {total_reward:.2f}, Steps: {esteps}")
 
     # 평가 결과 출력 및 저장
-    if verbose:
-        print("\n" + "="*41)
+    if print_result:
+        print("="*41)
         print(f"평가 결과 ({episode_num} 에피소드 평균)")
         print("="*41)
         print(f"Total Reward  : {np.mean(episode_rewards):.2f} ± {np.std(episode_rewards):.2f}")
