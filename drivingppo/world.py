@@ -522,6 +522,10 @@ class World:
         return len(self.__waypoints)
 
     @property
+    def is_done(self) -> bool:
+        return self.arrived  or self.player_collision  or self.lost
+
+    @property
     def arrived(self) -> bool:
         return self.waypoint_idx >= len(self.__waypoints)
 
