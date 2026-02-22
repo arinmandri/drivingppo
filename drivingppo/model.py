@@ -243,7 +243,7 @@ def train(
         lr:float|Callable[[float], float]=1e-4,
         gamma=0.99,
         ent_coef=0.0,
-        progress_bar=True,
+        progress_display:Literal['tqdm', 'simple']|None='simple',
         seed=42
 ) -> PPO:
     """
@@ -282,7 +282,11 @@ def train(
     assert isinstance(model, PPO)
 
     # 콜백
-    callbacks:list[BaseCallback] = [TensorboardCallback()]  # 커스텀 매트릭
+    callbacks:list[BaseCallback] = []
+    if tb_log:
+        callbacks.append(TensorboardCallback())  # 커스텀 매트릭
+    if progress_display == 'simple':
+        callbacks.append(PercentageProgressCallback(total_timesteps=steps))
     if save_freq:
         # 모델 저장 콜백
         checkpoint_callback = CheckpointCallback(
@@ -296,7 +300,7 @@ def train(
         with torch.no_grad():
             model.policy.log_std.fill_(log_std)
 
-    print(f"=== 학습 재개 (현재 스텝: {model.num_timesteps} / 목표: {steps + model.num_timesteps} / 남은: {steps}) ===")
+    print(f"=== 학습 (현재 스텝: {model.num_timesteps} | 목표: {steps + model.num_timesteps} | 남은: {steps}) ===")
 
     if steps > 0:
         model.learn(
@@ -304,7 +308,7 @@ def train(
             callback=callbacks,
             tb_log_name=run_name,
             log_interval=10,
-            progress_bar=progress_bar,
+            progress_bar=True  if progress_display == 'tqdm'  else False,
 
             reset_num_timesteps=reset_num_timesteps # 내부 타임스텝 카운터 초기화 여부
         )
@@ -402,7 +406,7 @@ def evaluate(
         model = PPO.load(CHECKPOINT_DIR+model, env=env)
     assert isinstance(model, PPO)
 
-    print(f"{episode_num}회 에피소드 평가 시작...")
+    if verbose: print(f"{episode_num}회 에피소드 평가 시작...")
 
     all_metrics = defaultdict(list)
     episode_rewards = []
@@ -440,7 +444,7 @@ def evaluate(
     if print_result:
         print("="*41)
         print(f"평가 결과 ({episode_num} 에피소드 평균)")
-        print("="*41)
+        print("-"*41)
         print(f"Total Reward  : {np.mean(episode_rewards):.2f} ± {np.std(episode_rewards):.2f}")
         print(f"Episode Length: {np.mean(episode_lengths):.1f} ± {np.std(episode_lengths):.2f}")
 
@@ -449,7 +453,7 @@ def evaluate(
 
         # 수: 평균, 표준편차
         num_df = df_metrics.select_dtypes(include=[np.number])
-        if not num_df.empty and verbose:
+        if not num_df.empty and print_result:
             print("-" * 41)
             summary = num_df.describe().loc[['mean', 'std']].T
             summary['mean'] = summary['mean'].map('{:.4f}'.format)  # 지수표기 안 함.
@@ -457,16 +461,18 @@ def evaluate(
 
         # 문자열(범주형): 종류별 비율
         cat_df = df_metrics.select_dtypes(exclude=[np.number])
-        if not cat_df.empty and verbose:
+        if not cat_df.empty and print_result:
             print("-" * 41)
             for col in cat_df.columns:
-                print(f"\n* {col}")
+                print(f"* {col}")
                 counts = df_metrics[col].value_counts()
                 ratios = df_metrics[col].value_counts(normalize=True)
 
                 for idx, val in counts.items():
                     ratio = ratios[idx] * 100  #type:ignore
                     print(f"   - {idx:<10}: {val:3d}회 ({ratio:5.1f}%)")
+        if print_result:
+            print("="*41)
 
         # CSV 저장
         if csv_path:
@@ -480,3 +486,65 @@ def evaluate(
     env.close()
 
     return all_metrics
+
+class PercentageProgressCallback(BaseCallback):
+    """실제 누적 타임스텝(num_timesteps)을 기준으로 전체 학습의 10% 단위 진행도를 출력하는 콜백"""
+    def __init__(self, total_timesteps: int, verbose=0):
+        super().__init__(verbose)
+        self.total_timesteps = total_timesteps
+        self.start_time = 0
+        self.next_target_percent = 10  # 최초 목표
+        self.initial_num_timesteps = 0 # 이번 학습 세션의 시작 스텝
+
+        # 남은 시간 계산을 위한 직전 마일스톤(10% 단위)의 시간과 스텝 기록
+        self.last_milestone_time = 0
+        self.last_milestone_steps = 0
+
+    def _on_training_start(self) -> None:
+        self.start_time = time.time()
+        self.last_milestone_time = self.start_time
+
+        # 학습 시작 시점의 모델 누적 스텝을 기준점으로 저장
+        self.initial_num_timesteps = self.model.num_timesteps
+        self.last_milestone_steps = 0
+
+    def _on_step(self) -> bool:
+        # 이번 learn() 호출에서 순수하게 진행된 스텝 계산
+        current_progress = self.num_timesteps - self.initial_num_timesteps
+
+        # 목표 스텝 계산
+        target_step = int(self.total_timesteps * (self.next_target_percent / 100.0))
+
+        # 순수 진행 스텝이 목표 스텝 이상 도달 시 출력
+        if current_progress >= target_step:
+            current_time = time.time()
+            elapsed = current_time - self.start_time
+            remaining_steps = max(0, self.total_timesteps - current_progress)
+
+            m, s = divmod(int(elapsed), 60)
+            h, m = divmod(m, 60)
+
+            eta_str = ""
+            # 100% 이하일 때만 직전 구간의 속도를 기반으로 남은 시간 계산
+            if self.next_target_percent < 100:
+                delta_time = current_time - self.last_milestone_time
+                delta_steps = current_progress - self.last_milestone_steps
+                
+                if delta_steps > 0:
+                    time_per_step = delta_time / delta_steps
+                    eta_seconds = int(time_per_step * remaining_steps)
+
+                    eta_m, eta_s = divmod(eta_seconds, 60)
+                    eta_h, eta_m = divmod(eta_m, 60)
+                    eta_str = f" | 남은 시간: {eta_h:02d}:{eta_m:02d}:{eta_s:02d}"
+
+            print(f"[진행도 {self.next_target_percent:3d}%] 경과 시간: {h:02d}:{m:02d}:{s:02d}{eta_str} | "
+                  f"이번 목표: {current_progress} / {self.total_timesteps} 스텝 | "
+                  f"(모델 총 누적: {self.num_timesteps})")
+
+            # 다음 구간 계산을 위해 현재 상태를 마일스톤으로 갱신
+            self.last_milestone_time = current_time
+            self.last_milestone_steps = current_progress
+            self.next_target_percent += 10
+
+        return True

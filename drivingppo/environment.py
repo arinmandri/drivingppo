@@ -126,7 +126,7 @@ class WorldEnv(gym.Env):
         self.render_mode = render_mode
         self.auto_close_at_end = auto_close_at_end
         self.viewer:WorldViewer|None = None
-        print(f'WorldEnv render:{self.render_mode}')
+        if self.render_mode is not None: print(f'WorldEnv render: {self.render_mode}')
 
 
     @property
