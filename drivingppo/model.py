@@ -188,8 +188,7 @@ def linear_schedule(start:float, end:float=0.0) -> Callable[[float], float]:
     return func
 
 
-def train_start(
-        gen_env:Callable[[], WorldEnv],
+def create_model(
         policy_kwargs=dict(
             features_extractor_class=NoFeaturesExtractor,
             features_extractor_kwargs=dict(),
@@ -198,32 +197,15 @@ def train_start(
                 vf=[512, 512, 256]  # Critic
             )
         ),
-        steps:int=0,  # 0: 학습 없이 생성만 된 모델 반환.
         save_path:str|None=None,
-        save_freq:int=0,
-        tb_log:bool=False,
-        run_name:str='DPPO',
         *,
         n_steps=512,
         batch_size=256,
-        vec_env:Literal['dummy', 'subp']|VecEnv='dummy',
-        lr:float|Callable[[float], float]=3e-4,
-        gamma=0.9,
-        ent_coef=0.0,
-        progress_bar=True,
-        seed=42
 ) -> PPO:
     """
-    학습 처음부터
+    모델 생성만
     """
-
-    if vec_env == 'dummy':
-        vec_env_cls = DummyVecEnv
-    elif vec_env == 'subp':
-        vec_env_cls = SubprocVecEnv
-    else:
-        raise Exception(f'unknown vec_env: {vec_env}')
-    vec_env = make_vec_env(gen_env, n_envs=1, vec_env_cls=vec_env_cls, seed=seed)# n_envs: 병렬 환경 수
+    vec_env = make_vec_env(WorldEnv, n_envs=1, vec_env_cls=DummyVecEnv)# n_envs: 병렬 환경 수
 
     print('POLICY:', policy_kwargs)
 
@@ -232,53 +214,21 @@ def train_start(
         "MlpPolicy",
         vec_env,
         policy_kwargs=policy_kwargs,
-
-        verbose=0,
-        tensorboard_log=LOG_DIR  if tb_log  else None,
-
-        # 학습 하이퍼파라미터
-        learning_rate=lr,
-        gamma=gamma,           # 미래 보상 할인율
-        ent_coef=ent_coef,     # 엔트로피: 장애물 거의 없는 환경 - 약하게
         n_steps=n_steps,       # 데이터 수집 스텝 (버퍼 크기, NUM_ENVS * n_steps = 총 수집 데이터량)
         batch_size=batch_size, # 미니 배치 크기
-
-        device="auto"  # GPU 사용 설정
     )
 
-    # 콜백
-    callbacks:list[BaseCallback] = [TensorboardCallback()]  # 요소별 점수
-    if save_freq:
-        # 모델 저장 콜백
-        checkpoint_callback = CheckpointCallback(
-            save_freq=save_freq,
-            save_path=CHECKPOINT_DIR,
-            name_prefix='check'
-        )
-        callbacks.append(checkpoint_callback)
-
-    print("=== PPO 학습 시작 ===")
-
-    if steps > 0:
-        model.learn(
-            total_timesteps=steps,
-            callback=callbacks,
-            tb_log_name=run_name,
-            log_interval=10,
-            progress_bar=progress_bar,
-        )
-
-    # 최종 모델 저장
+    # 모델 저장
     if save_path:
         model.save(CHECKPOINT_DIR+save_path)
-        print(f"=== 학습 완료: {CHECKPOINT_DIR+save_path} ===")
+        print(f"모델 저장: {CHECKPOINT_DIR+save_path}")
 
     vec_env.close()  # 환경 정리
 
     return model
 
 
-def train_resume(
+def train(
         model:PPO|str,
         gen_env: Callable[[], WorldEnv],
         steps: int,
@@ -288,7 +238,7 @@ def train_resume(
         tb_log:bool=False,
         run_name:str='DPPO',
         *,
-        vec_env:Literal['dummy', 'subp']|VecEnv='subp',
+        vec_env:Literal['dummy', 'subp']|VecEnv='dummy',
         log_std=None,
         lr:float|Callable[[float], float]=1e-4,
         gamma=0.99,
