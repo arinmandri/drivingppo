@@ -278,9 +278,11 @@ class WorldEnv(gym.Env):
         result_collision = False
         result_wpoint = False
         for _ in range(self.action_repeat):
+            self.wstep_count += 1
             _, result_collision_step, result_wpoint_step = w.step(self.time_step)
             result_collision += result_collision_step
-            result_wpoint      += result_wpoint_step
+            result_wpoint    += result_wpoint_step
+            if w.arrived: break
         # if self.estep_count == 1:
         #     if result_collision: print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 충돌 (hint: 목표점 수 {w.path_len})')
         #     if result_wpoint:    print(f'💥💥💥💥💥💥💥💥💥 맵 확인 필요: 시작과동시에 골 (hint: 목표점 수 {w.path_len})')
@@ -373,7 +375,7 @@ class WorldEnv(gym.Env):
                 'ending/achvRate': w.waypoint_idx / w.path_len,
                 'ending/type':     ending,
                 'ending/estep':    self.estep_count,
-                'ending/wstep':    self.estep_count * self.action_repeat,
+                'ending/wstep':    self.wstep_count,
                 'ending/sec':      tcount,
                 # 'rewards/0.total':       self.reward_totals[0]/tcount,
                 # 'rewards/1.wPoint':      self.reward_totals[1]/tcount,
@@ -436,6 +438,7 @@ class WorldEnv(gym.Env):
         self.world = w
 
         self.estep_count = 0
+        self.wstep_count = 0
         self.reward_totals = [0.0 for _ in range(METRIC_SIZE)]
         self.time_limit = self.time_gain_limit  # 제한시간. 목표점 도달시마다 추가 획득.
         self.metrics = MyMetrics(w)
