@@ -124,7 +124,7 @@ def get_path_length_of(world:World) -> float:
     """경로 총 길이: 플레이어~첫wp + 각 wp 사이 거리"""
     pts = [(world.player.x, world.player.z)] + world.waypoints
     result = 0.0
-    for i in range(world.path_len - 1):
+    for i in range(len(pts)-1):
         x0, z0 = pts[i]
         x1, z1 = pts[i+1]
         d = distance_of(x0, z0, x1, z1)
@@ -136,11 +136,22 @@ class MyMetrics:
     def __init__(self, world:World):
         self.action_history = []
         self.speed_history = []
+        self.trace_length = 0.0
         self.path_len_scfac = get_path_length_of(world)
+        self.__x0 = world.player.x
+        self.__z0 = world.player.z
 
     def step(self, action, world:World):
         self.action_history.append(action)
         self.speed_history.append(world.player.speed)
+
+        # 이동거리
+        x1 = world.player.x
+        z1 = world.player.z
+        dd = distance_of(self.__x0, self.__z0, x1, z1)
+        self.trace_length += dd
+        self.__x0 = world.player.x
+        self.__z0 = world.player.z
 
     def export(self) -> dict[str, float]:
         # 액션 분산
@@ -159,10 +170,16 @@ class MyMetrics:
             speed_var = 0.0
             speed_mean = 0.0
 
+        if self.path_len_scfac > 1e-5:
+            normed_path_len = self.trace_length / self.path_len_scfac
+        else:
+            normed_path_len = 0.0
+
         return {
             "ws_diff_mean": ws_diff_mean,
             "ad_sq_mean": ad_sq_mean,
             "speed_mean": speed_mean,
             "speed_var": speed_var,
+            "normed_path_len": normed_path_len,
         }
 
