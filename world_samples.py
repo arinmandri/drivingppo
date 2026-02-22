@@ -29,7 +29,7 @@ W_CONFIG = {
 }
 CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.  # 에이전트 대각선길이의 반  (1.5, 3)-->1.68
 
-def gen_1():  return generate_random_world_plain(map_h=100, map_w=100, num=1,                min_dist=NEAR*2, max_dist=20,        ang_lim=0,      ang_init='half', spd_init=0,      near=2)
+def gen_1():  return generate_random_world_plain(map_h= 60, map_w= 60, num=1,                min_dist=NEAR*2, max_dist=20,        ang_lim=0,      ang_init='half', spd_init=0,      near=2)
 def gen_2():  return generate_random_world_plain(map_h=150, map_w=150, num=2,                min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='rand', spd_init='rand')
 def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=2,                min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='rand', spd_init='rand', near=NEAR-0.5)  # 학습용: 도달판정범위 약간 작게
 def gen_3():  return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='rand', spd_init='rand')
