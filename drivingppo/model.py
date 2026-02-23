@@ -48,17 +48,29 @@ class NoFeaturesExtractor(BaseFeaturesExtractor):
 
 
 class VMLPFeaturesExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Box, output_dim=256):
-        super(VMLPFeaturesExtractor, self).__init__(observation_space, features_dim=output_dim)
+    def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=16):
 
-        self.layer = nn.Sequential(
-            nn.Linear(OBSERVATION_DIM, output_dim),
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * conv_out_channels  # SHWP와 동일한 최종 출력 차원
+
+        super().__init__(observation_space, features_dim=total_feature_dim)
+
+        path_input_dim = observation_space.shape[0] - 1
+        path_output_dim = LOOKAHEAD_POINTS * conv_out_channels
+
+        self.layer1 = nn.Sequential(
+            nn.Linear(path_input_dim, 64),
             nn.ReLU(),
+            nn.Linear(64, path_output_dim),
+            nn.ReLU()
         )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        output = self.layer(observations)
-        return output
+        speed       = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
+        path_data   = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        path_output = self.layer1(path_data)
+
+        return torch.cat((speed, path_output), dim=1)
 
 
 class Shwp1FeaturesExtractor(BaseFeaturesExtractor):
@@ -524,7 +536,7 @@ class PercentageProgressCallback(BaseCallback):
             if self.next_target_percent < 100:
                 delta_time = current_time - self.last_milestone_time
                 delta_steps = current_progress - self.last_milestone_steps
-                
+
                 if delta_steps > 0:
                     time_per_step = delta_time / delta_steps
                     eta_seconds = int(time_per_step * remaining_steps)
@@ -543,3 +555,6 @@ class PercentageProgressCallback(BaseCallback):
             self.next_target_percent += 10
 
         return True
+
+    def _on_training_end(self) -> None:
+        self.logger.dump(step=self.num_timesteps)
