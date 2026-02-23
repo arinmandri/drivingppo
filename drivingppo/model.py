@@ -63,7 +63,7 @@ class VMLPFeaturesExtractor(BaseFeaturesExtractor):
 
 class Shwp1FeaturesExtractor(BaseFeaturesExtractor):
 
-    def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=8):
+    def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=16):
 
         total_feature_dim = 1 + LOOKAHEAD_POINTS * conv_out_channels
 
