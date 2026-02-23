@@ -98,7 +98,7 @@ def generate_random_world_plain(
                    pangle_x+pi                 if ang_init == 'inv'   else \
                    ang_init
 
-    pspeed = np.random.uniform(-SPD_SCFAC, SPD_SCFAC)*0.5  if spd_init == 'rand'  else spd_init
+    pspeed = np.random.uniform(-SPD_SCFAC, SPD_SCFAC)  if spd_init == 'rand'  else spd_init
 
 
     # 목표점 생성
