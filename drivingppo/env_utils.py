@@ -153,7 +153,7 @@ class MyMetrics:
         self.__x0 = world.player.x
         self.__z0 = world.player.z
 
-    def export(self) -> dict[str, float]:
+    def export(self, successed=True) -> dict[str, float|None]:
         # 액션 분산
         if len(self.action_history) > 0:
             action_arr = np.array(self.action_history)
@@ -181,7 +181,7 @@ class MyMetrics:
             "ad_sq_mean": ad_sq_mean,
             "speed_mean": speed_mean,
             "speed_var": speed_var,
-            "normed_path_len": normed_path_len,
+            "normed_path_len": normed_path_len  if successed  else None,
             "brake_rate": brake_rate,
         }
 

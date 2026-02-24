@@ -189,6 +189,7 @@ class WorldEnv(gym.Env):
 
         terminated = False
         truncated = False
+        successed = False
         ending = ''
 
         s_norm = speed_norm(p.speed)  # 속도점수
@@ -239,6 +240,7 @@ class WorldEnv(gym.Env):
                 if sum(self.metrics.speed_history) <= 0.0:  # 후진진행한 게 틀림없다.
                     reward_step[1] = - 300.0
                 terminated = True
+                successed = True
 
         # 전혀 엉뚱한 곳 감
         elif distance > w.far:
@@ -251,6 +253,7 @@ class WorldEnv(gym.Env):
         elif w.t_acc >= self.max_time:
             ending = 'timeout'
             truncated = True
+            successed = True
 
         # 밀집보상
         reward_time = -5.0
@@ -308,7 +311,7 @@ class WorldEnv(gym.Env):
                 # 'rewards/7.ad':          self.reward_totals[7]/tcount,
                 # 'rewards/8.danger':      self.reward_totals[8]/tcount,
                 # 'rewards/9.danger_d':    self.reward_totals[9]/tcount,
-            } | self.metrics.export()
+            } | self.metrics.export(successed)
 
             self.print_result()
 
