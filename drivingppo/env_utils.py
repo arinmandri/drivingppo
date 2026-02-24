@@ -177,11 +177,11 @@ class MyMetrics:
             normed_path_len = 0.0
 
         return {
-            "ws_diff_mean": ws_diff_mean,
-            "ad_sq_mean": ad_sq_mean,
-            "speed_mean": speed_mean,
-            "speed_var": speed_var,
-            "normed_path_len": normed_path_len  if successed  else None,
-            "brake_rate": brake_rate,
+            "metrics/ws_diff_mean": ws_diff_mean,
+            "metrics/ad_sq_mean": ad_sq_mean,
+            "metrics/speed_mean": speed_mean,
+            "metrics/speed_var": speed_var,
+            "metrics/normed_path_len": normed_path_len  if successed  else None,
+            "metrics/brake_rate": brake_rate,
         }
 
