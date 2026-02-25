@@ -238,7 +238,7 @@ class WorldEnv(gym.Env):
             if w.arrived:
                 ending = 'arrived'
                 if sum(self.metrics.speed_history) <= 0.0:  # 후진진행한 게 틀림없다.
-                    reward_step[1] = - 300.0
+                    reward_step[1] = - 150.0
                 terminated = True
                 successed = True
 
@@ -259,9 +259,9 @@ class WorldEnv(gym.Env):
         reward_time = -5.0
 
         distance_d = dis_nx - dis_pv
-        reward_progress    = - distance_d * 0.07
+        reward_progress    = - distance_d * 0.03
         if s_norm < 0: reward_progress = min(0.0, reward_progress)
-        reward_orientation = cos_nx * 0.2
+        reward_orientation = cos_nx * 0.1
         reward_action_ws   = 0.0#- ws * s_norm * 4.0  if ws * s_norm > 0  else 0.0  # 브레이크 사용시 비용 없다 침.
         reward_action_ad   = 0.0#- ad * ad * 1.7
         danger             = - ld_max_1 * 0.6

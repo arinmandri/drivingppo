@@ -29,9 +29,9 @@ W_CONFIG = {
 }
 CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.  # 에이전트 대각선길이의 반  (1.5, 3)-->1.68
 
-def gen_1t(): return generate_random_world_plain(map_h= 60, map_w= 60, num=1,                min_dist=NEAR*2, max_dist=20,        ang_lim=0.0,    ang_init='half', spd_init=0.0, near=2)
-def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=2,                min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-0.5)  # 학습용: 도달판정범위 약간 작게
-def gen_3t(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-0.5)
+def gen_1t(): return generate_random_world_plain(map_h= 60, map_w= 60, num=1,                min_dist=NEAR*2, max_dist=20,        ang_lim=0.0,    ang_init='half', spd_init=0.0,    near=2)
+def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=2,                min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0,    near=NEAR-0.5)  # 학습용: 도달판정범위 약간 작게
+def gen_3t(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init='posi', near=NEAR-0.5)
 def gen_3l(): return generate_random_world_plain(map_h=300, map_w=300, num=10,               min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0)  # 테스트용: 같은 패턴인데 좀 긴 경로
 def gen_from(gen:Callable[[], World], seed, n):
     """seed 시드로 gen을 n번째 호출했을 때 생성되는 맵 반환"""
@@ -65,7 +65,7 @@ def generate_random_world_plain(
         ang_init:float|Literal['p', 'half', 'rand', 'inv']='p',
         ang_lim=pi*0.5,
         pos_init:Literal['corner', 'center']='center',
-        spd_init:float|Literal['rand']=0,
+        spd_init:float|Literal['rand', 'half', 'posi']=0,
         near:float|None=None,
         seed=None,
     ):
@@ -93,7 +93,10 @@ def generate_random_world_plain(
                    pangle_x+pi                 if ang_init == 'inv'   else \
                    ang_init
 
-    pspeed = np.random.uniform(-SPD_SCFAC, SPD_SCFAC)  if spd_init == 'rand'  else spd_init
+    pspeed = np.random.uniform(-SPD_SCFAC, SPD_SCFAC)    if spd_init == 'rand'  else \
+             np.random.uniform(-SPD_SCFAC, SPD_SCFAC)/2  if spd_init == 'half'  else \
+             np.random.uniform(0.0,        SPD_SCFAC)    if spd_init == 'posi'  else \
+             spd_init
 
 
     # 목표점 생성
