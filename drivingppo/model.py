@@ -273,6 +273,7 @@ def train(
     is_temp_file = False
     if isinstance(model, str):
         model_loading_path = model
+        print(f"=== 체크포인트 로드: {CHECKPOINT_DIR+model_loading_path} ===")
     elif isinstance(model, PPO):
         model_loading_path = 'temp_model-' + time.strftime('%y%m%d%H%M%S') + str(random.randint(0, 9999))
         is_temp_file = True
@@ -280,7 +281,6 @@ def train(
     else:
         raise ValueError(f'model should be str or PPO not {type(model)}')
 
-    print(f"=== 체크포인트 로드: {CHECKPOINT_DIR+model_loading_path} ===")
     model = PPO.load(
         path=CHECKPOINT_DIR+model_loading_path,
         env=vec_env,
@@ -546,8 +546,8 @@ class PercentageProgressCallback(BaseCallback):
                     eta_str = f" | 남은 시간: {eta_h:02d}:{eta_m:02d}:{eta_s:02d}"
 
             print(f"[진행도 {self.next_target_percent:3d}%] 경과 시간: {h:02d}:{m:02d}:{s:02d}{eta_str} | "
-                  f"이번 목표: {current_progress} / {self.total_timesteps} 스텝 | "
-                  f"(모델 총 누적: {self.num_timesteps})")
+                  f"{current_progress} / {self.total_timesteps} 스텝 | "
+                  f"모델 총 누적: {self.num_timesteps}")
 
             # 다음 구간 계산을 위해 현재 상태를 마일스톤으로 갱신
             self.last_milestone_time = current_time
@@ -557,4 +557,5 @@ class PercentageProgressCallback(BaseCallback):
         return True
 
     def _on_training_end(self) -> None:
+        print(f'모델 총 누적: {self.num_timesteps}')
         self.logger.dump(step=self.num_timesteps)
