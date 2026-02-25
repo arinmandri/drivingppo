@@ -29,10 +29,10 @@ W_CONFIG = {
 }
 CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.  # 에이전트 대각선길이의 반  (1.5, 3)-->1.68
 
-def gen_1t(): return generate_random_world_plain(map_h= 60, map_w= 60, num=1,                min_dist=NEAR*2, max_dist=20,        ang_lim=0.0,    ang_init='half', spd_init=0.0,    near=2)
+def gen_1t(): return generate_random_world_plain(map_h= 60, map_w= 60, num=1,                min_dist=0.0,    max_dist=20,        ang_lim=0.0,    ang_init='half', spd_init=0.0,    near=2.0)
 def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=2,                min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0,    near=NEAR-0.5)  # 학습용: 도달판정범위 약간 작게
-def gen_3t(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init='posi', near=NEAR-0.5)
-def gen_3l(): return generate_random_world_plain(map_h=300, map_w=300, num=10,               min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0)  # 테스트용: 같은 패턴인데 좀 긴 경로
+def gen_3t(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0,    near=NEAR-0.5)
+def gen_3l(): return generate_random_world_plain(map_h=300, map_w=300, num=10,               min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init='posi')  # 테스트용: 같은 패턴인데 좀 긴 경로
 def gen_from(gen:Callable[[], World], seed, n):
     """seed 시드로 gen을 n번째 호출했을 때 생성되는 맵 반환"""
     set_seed(seed)
@@ -74,28 +74,30 @@ def generate_random_world_plain(
         np.random.seed(seed)
         random.seed(seed)
 
+    rd = np.random.uniform(0, pi)
     if pos_init == 'center':
         px = map_w/2
         pz = map_h/2
-        pangle_x = np.random.uniform(0, pi2)
-        init_ang = np.random.uniform(0, pi2)                   if ang_init == 'rand'  else \
-                   pangle_x - pi/2 + np.random.uniform(0, pi)  if ang_init == 'half'  else \
-                   pangle_x                                    if ang_init == 'p'     else \
-                   pangle_x + pi                               if ang_init == 'inv'   else \
+        pangle_x = rd*2
+        init_ang = rd*2                   if ang_init == 'rand'  else \
+                   pangle_x - pi/2 + rd   if ang_init == 'half'  else \
+                   pangle_x               if ang_init == 'p'     else \
+                   pangle_x + pi          if ang_init == 'inv'   else \
                    ang_init
     elif pos_init == 'corner':
         px = map_w/10
         pz = map_h/10
-        pangle_x = np.random.uniform(0, pi2)
-        init_ang = np.random.uniform(0, pi/4)  if ang_init == 'rand'  \
-                                               or ang_init == 'half'  else \
-                   pangle_x                    if ang_init == 'p'     else \
-                   pangle_x+pi                 if ang_init == 'inv'   else \
+        pangle_x = rd*2
+        init_ang = rd/4         if ang_init == 'rand'  \
+                                or ang_init == 'half'  else \
+                   pangle_x     if ang_init == 'p'     else \
+                   pangle_x+pi  if ang_init == 'inv'   else \
                    ang_init
 
-    pspeed = np.random.uniform(-SPD_SCFAC, SPD_SCFAC)    if spd_init == 'rand'  else \
-             np.random.uniform(-SPD_SCFAC, SPD_SCFAC)/2  if spd_init == 'half'  else \
-             np.random.uniform(0.0,        SPD_SCFAC)    if spd_init == 'posi'  else \
+    rd = np.random.uniform(0.0, SPD_SCFAC)
+    pspeed = rd*2 - SPD_SCFAC  if spd_init == 'rand'  else \
+             rd - SPD_SCFAC/2  if spd_init == 'half'  else \
+             rd                if spd_init == 'posi'  else \
              spd_init
 
 
@@ -435,9 +437,10 @@ def generate_random_waypoints(
         map_w, map_h,
         init_x, init_z,
         init_ang,
+        init_dist:float|None=None,
         angle_change_limit=pi/2,
-        min_dist=2.0,
-        max_dist=Car.SPEED_MAX_W,
+        min_dist=NEAR*2,
+        max_dist=DIS_SCFAC,
         margin:int=5,
         seed=None,
     ) -> list[tuple[float, float]]:
@@ -447,6 +450,7 @@ def generate_random_waypoints(
         random.seed(seed)
 
     if min_dist > max_dist: raise Exception('min_dist >= max_dist')
+    if init_dist is None: init_dist = max_dist
 
     waypoints = []
 
@@ -457,8 +461,8 @@ def generate_random_waypoints(
     for i in range(num):
 
         # 랜덤 거리
-        if i == 0  and num > 1:
-            distance = np.random.uniform(NEAR, max_dist)
+        if i == 0:
+            distance = init_dist
         else:
             distance = np.random.uniform(min_dist, max_dist)
 
