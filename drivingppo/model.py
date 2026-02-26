@@ -273,7 +273,7 @@ def train(
     is_temp_file = False
     if isinstance(model, str):
         model_loading_path = model
-        print(f"=== 체크포인트 로드: {CHECKPOINT_DIR+model_loading_path} ===")
+        print(f"체크포인트 로드: {CHECKPOINT_DIR+model_loading_path}")
     elif isinstance(model, PPO):
         model_loading_path = 'temp_model-' + time.strftime('%y%m%d%H%M%S') + str(random.randint(0, 9999))
         is_temp_file = True
@@ -312,7 +312,7 @@ def train(
         with torch.no_grad():
             model.policy.log_std.fill_(log_std)
 
-    print(f"=== 학습 (현재 스텝: {model.num_timesteps} | 목표: {steps + model.num_timesteps} | 남은: {steps}) ===")
+    print(f"학습 (현재 스텝: {model.num_timesteps} | 목표: {steps + model.num_timesteps} | 남은: {steps})")
 
     if steps > 0:
         model.learn(
@@ -328,7 +328,7 @@ def train(
     # 최종 모델 저장
     if save_path:
         model.save(CHECKPOINT_DIR+save_path)
-        print(f"=== 학습 완료 ({model.num_timesteps} 스텝): {CHECKPOINT_DIR+save_path} ===")
+        print(f"학습 완료 ({model.num_timesteps} 스텝): {CHECKPOINT_DIR+save_path}")
 
     # 임시 파일 삭제
     if is_temp_file:
