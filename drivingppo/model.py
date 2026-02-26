@@ -54,7 +54,7 @@ class VMLPFeaturesExtractor(BaseFeaturesExtractor):
 
         super().__init__(observation_space, features_dim=total_feature_dim)
 
-        path_input_dim = observation_space.shape[0] - 1
+        path_input_dim = OBSERVATION_DIM - 1
         path_output_dim = LOOKAHEAD_POINTS * conv_out_channels
 
         self.layer1 = nn.Sequential(
