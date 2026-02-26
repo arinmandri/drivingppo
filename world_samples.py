@@ -15,24 +15,24 @@ from drivingppo.environment import SPD_SCFAC
 MAP_W = 150
 MAP_H = 150
 
-NEAR = 5.0
+NEAR = 3.0
 
 W_CONFIG = {
     # 'lidar_raynum': LIDAR_NUM,
     # 'lidar_range':  LIDAR_RANGE,
     # 'angle_start':  LIDAR_START,
     # 'angle_end':    LIDAR_END,
-    'wphitting_method': 'pass',
+    'wphitting_method': 'near',
     'map_border': True,
     'near': NEAR,
     'far': 999.9,
 }
 CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.  # 에이전트 대각선길이의 반  (1.5, 3)-->1.68
 
-def gen_1t(): return generate_random_world_plain(map_h= 60, map_w= 60, num=1,                min_dist=20.0,   max_dist=20.0,      ang_lim=0.0,    ang_init='half', spd_init=0.0,    near=2.0)
-def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=2,                min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0,    near=NEAR-0.5)  # 학습용: 도달판정범위 약간 작게
-def gen_3t(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init='half', near=NEAR-0.5)
-def gen_3l(): return generate_random_world_plain(map_h=300, map_w=300, num=10,               min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init='half')  # 테스트용
+def gen_1t(): return generate_random_world_plain(map_h= 60, map_w= 60, num=1,                min_dist=20.0, max_dist=20.0,      ang_lim=0.0,    ang_init='half', spd_init=0.0,    near=1.5)
+def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=2,                min_dist=10.0, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0,    near=NEAR-0.3)  # 학습용: 도달판정범위 약간 작게
+def gen_3t(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, min_dist=10.0, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=5.0,    near=NEAR-0.3)
+def gen_3l(): return generate_random_world_plain(map_h=300, map_w=300, num=10,               min_dist=10.0, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=5.0)  # 테스트용
 def gen_from(gen:Callable[[], World], seed, n):
     """seed 시드로 gen을 n번째 호출했을 때 생성되는 맵 반환"""
     set_seed(seed)
@@ -60,6 +60,7 @@ def generate_random_world_plain(
         map_w=MAP_W,
         map_h=MAP_H,
         num=15,
+        init_dist:float|Literal['rand', 'min', 'max']='rand',
         min_dist=NEAR*2,
         max_dist=20.0,
         ang_init:float|Literal['p', 'half', 'rand', 'inv']='p',
@@ -100,6 +101,12 @@ def generate_random_world_plain(
              rd                if spd_init == 'posi'  else \
              spd_init
 
+    rd = np.random.uniform(min_dist, max_dist)
+    init_dist = rd        if init_dist == 'rand'  else \
+                min_dist  if init_dist == 'min'  else \
+                max_dist  if init_dist == 'max'  else \
+                init_dist
+
 
     # 목표점 생성
     waypoints = generate_random_waypoints(num,
@@ -107,6 +114,7 @@ def generate_random_world_plain(
                                           px, pz,
                                           init_ang=init_ang,
                                           angle_change_limit=ang_lim,
+                                          init_dist=init_dist,
                                           min_dist=min_dist,
                                           max_dist=max_dist)
 
