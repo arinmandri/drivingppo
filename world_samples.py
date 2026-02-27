@@ -29,10 +29,11 @@ W_CONFIG = {
 }
 CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.  # 에이전트 대각선길이의 반  (1.5, 3)-->1.68
 
-def gen_1t(): return generate_random_world_plain(map_h= 60, map_w= 60, num=1,                init_dist=20.0,      min_dist=0.0,    max_dist=0.0 ,      ang_lim=0.0,    ang_init='half', spd_init=0.0, near=1.5)
-def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=2,                init_dist=20.0,      min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-0.5)  # 학습용: 도달판정범위 약간 작게
-def gen_3t(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, init_dist=DIS_SCFAC, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-0.5)
-def gen_3l(): return generate_random_world_plain(map_h=300, map_w=300, num=10,               init_dist=DIS_SCFAC, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, )  # 테스트용
+def gen_1t():  return generate_random_world_plain(map_h= 60, map_w= 60, num=1,                init_dist=20.0,      min_dist=0.0,    max_dist=0.0 ,      ang_lim=0.0,    ang_init='half', spd_init=0.0, near=1.5)
+def gen_2t():  return generate_random_world_plain(map_h=150, map_w=150, num=2,                init_dist=20.0,      min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-0.5)  # 학습용: 도달판정범위 약간 작게
+def gen_3ty(): return generate_random_world_plain(map_h=150, map_w=150, num=LOOKAHEAD_POINTS, init_dist=DIS_SCFAC, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-0.5)  # 유한지평
+def gen_3tm(): return generate_random_world_plain(map_h=150, map_w=150, num=20,               init_dist=DIS_SCFAC, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-0.5)  # 준무한지평
+def gen_3l():  return generate_random_world_plain(map_h=300, map_w=300, num=10,               init_dist=DIS_SCFAC, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, )  # 테스트용
 def gen_from(gen:Callable[[], World], seed, n):
     """seed 시드로 gen을 n번째 호출했을 때 생성되는 맵 반환"""
     set_seed(seed)
@@ -54,7 +55,7 @@ def gen_obs():
             return generate_world_square(randint(30, 50), randint(30, 50), num=4)
         if choice < 5:
             return generate_world_zipper()
-    return gen_3t()
+    return gen_3tm()
 
 def generate_random_world_plain(
         map_w=MAP_W,
