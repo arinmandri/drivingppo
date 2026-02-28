@@ -50,7 +50,7 @@ def distance_score_far(x:float) -> float:
     return x / DIS_SCFAC
 
 
-def get_path_features_srel(world:World) -> list[float]:
+def get_path_features__ACC(world:World) -> list[float]:
     """
     경로 정보
     바로 앞의 점 몇 개의 거리와 각도.
@@ -83,7 +83,7 @@ def get_path_features_srel(world:World) -> list[float]:
 
     return path_data
 
-def get_path_features_fagnt(world:World) -> list[float]:
+def get_path_features__SRC(world:World) -> list[float]:
     """
     경로 정보 - 에이전트 기준
     """

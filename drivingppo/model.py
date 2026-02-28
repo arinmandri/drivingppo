@@ -38,19 +38,19 @@ LOG_DIR = f"./logs/"
 CHECKPOINT_DIR = './checks/'
 
 
-class NoFeaturesExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Box):
+class FE__I(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Box, **noargs):
 
-        super(NoFeaturesExtractor, self).__init__(observation_space, features_dim=OBSERVATION_DIM)
+        super(FE__I, self).__init__(observation_space, features_dim=OBSERVATION_DIM)
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         return observations
 
 
-class VMLPFeaturesExtractor(BaseFeaturesExtractor):
+class FE__VMLP(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=16):
 
-        total_feature_dim = 1 + LOOKAHEAD_POINTS * conv_out_channels  # SHWP와 동일한 최종 출력 차원
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * conv_out_channels  # WSWE와 동일한 최종 출력 차원
 
         super().__init__(observation_space, features_dim=total_feature_dim)
 
@@ -73,7 +73,7 @@ class VMLPFeaturesExtractor(BaseFeaturesExtractor):
         return torch.cat((speed, path_output), dim=1)
 
 
-class Shwp1FeaturesExtractor(BaseFeaturesExtractor):
+class FE__WSWE(BaseFeaturesExtractor):
 
     def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=16):
 
@@ -97,38 +97,6 @@ class Shwp1FeaturesExtractor(BaseFeaturesExtractor):
         path_data       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
 
         path_output = self.layer1(path_data.unsqueeze(1))
-
-        return torch.cat((speed, path_output), dim=1)
-
-
-class Shwp0FeaturesExtractor(BaseFeaturesExtractor):
-
-    def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=16):
-
-        total_feature_dim = 1 + LOOKAHEAD_POINTS * conv_out_channels
-
-        super().__init__(observation_space, features_dim=total_feature_dim)
-
-        self.layer1 = nn.Sequential(
-            nn.Conv1d(
-                in_channels=1,
-                out_channels=conv_out_channels,
-                kernel_size=EACH_POINT_INFO_SIZE * 2,
-                stride=EACH_POINT_INFO_SIZE,
-                padding=0),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
-
-    def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        batch_size = observations.shape[0]
-
-        speed           = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
-        path_data       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
-        path_data_0     = observations.new_tensor([[0.0, 1.0, 1.0, 0.0]]).expand(batch_size, -1)  # 첫번째 웨이포인트와 결합될 영점(에이전트중심에서 표현된 에이전트)
-
-        path_input_data = torch.cat((path_data_0, path_data), dim=1)
-        path_output = self.layer1(path_input_data.unsqueeze(1))
 
         return torch.cat((speed, path_output), dim=1)
 
@@ -202,7 +170,7 @@ def linear_schedule(start:float, end:float=0.0) -> Callable[[float], float]:
 
 def create_model(
         policy_kwargs=dict(
-            features_extractor_class=NoFeaturesExtractor,
+            features_extractor_class=FE__I,
             features_extractor_kwargs=dict(),
             net_arch=dict(
                 pi=[512, 512], # Actor
