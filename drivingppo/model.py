@@ -181,6 +181,7 @@ def create_model(
         *,
         n_steps=512,
         batch_size=256,
+        seed:int|None=None,
 ) -> PPO:
     """
     모델 생성만
@@ -196,6 +197,7 @@ def create_model(
         policy_kwargs=policy_kwargs,
         n_steps=n_steps,       # 데이터 수집 스텝 (버퍼 크기, NUM_ENVS * n_steps = 총 수집 데이터량)
         batch_size=batch_size, # 미니 배치 크기
+        seed=seed,
     )
 
     # 모델 저장
@@ -224,7 +226,7 @@ def train(
         gamma=0.99,
         ent_coef=0.0,
         progress_display:Literal['tqdm', 'simple']|None='simple',
-        seed=42
+        seed:int|None=None,
 ) -> PPO:
     """
     기존 모델 추가학습
