@@ -407,6 +407,7 @@ def evaluate(
 
             if done or truncated:
                 episode_rewards.append(total_reward)
+                all_metrics['total_reward'].append(total_reward)
 
                 if 'episode_metrics' in info:
                     for key, value in info['episode_metrics'].items():#type:ignore
