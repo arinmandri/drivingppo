@@ -158,10 +158,11 @@ class MyMetrics:
         if len(self.action_history) > 0:
             action_arr   = np.array(self.action_history)
             ws_var_rms   = np.mean(np.square(np.diff(action_arr[:, 0]))).item()  if len(self.action_history) > 1  else 0.0
+            ad_var_rms   = np.mean(np.square(np.diff(action_arr[:, 1]))).item()  if len(self.action_history) > 1  else 0.0
             ad_sq_mean   = np.mean(np.square(action_arr[:, 1])).item()
             brake_rate   = np.mean(action_arr[:, 0] < 0).item()
         else:
-            ws_var_rms, ad_sq_mean, brake_rate = 0.0, 0.0, 0.0
+            ws_var_rms, ad_var_rms, ad_sq_mean, brake_rate = 0.0, 0.0, 0.0, 0.0
 
         if len(self.speed_history) > 0:
             speed_arr  = np.array(self.speed_history)
@@ -178,6 +179,7 @@ class MyMetrics:
 
         return {
             "metrics/ws_var_rms": ws_var_rms,
+            "metrics/ad_var_rms": ad_var_rms,
             "metrics/ad_sq_mean": ad_sq_mean,
             "metrics/speed_mean": speed_mean,
             "metrics/speed_var": speed_var,
