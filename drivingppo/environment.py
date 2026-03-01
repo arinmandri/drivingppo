@@ -300,7 +300,7 @@ class WorldEnv(gym.Env):
                 'ending/type':     ending,
                 'ending/estep':    self.estep_count,
                 'ending/wstep':    self.wstep_count,
-                'ending/sec':      tcount,
+                'ending/sec':      tcount  if successed  else None,
                 'rewards/0.total':       self.reward_totals[0]/tcount,
                 'rewards/1.wPoint':      self.reward_totals[1]/tcount,
                 'rewards/2.fail':        self.reward_totals[2]/tcount,
