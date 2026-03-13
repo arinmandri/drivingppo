@@ -4,7 +4,7 @@ from collections.abc import Iterable
 
 from .world import World, Car, angle_of, create_empty_map, pi, pi2, rad_to_deg
 from .common import LIDAR_NUM, LIDAR_RANGE, LIDAR_START, LIDAR_END, MAP_W, MAP_H
-from .environment import get_state, observation_str, apply_action, action_str
+from .environment import get_state, get_path_features__DEFAULT, observation_str, apply_action, action_str
 
 import numpy as np
 from numpy import ndarray as Arr
@@ -99,7 +99,7 @@ class MyPpoAdaptor:
             return True, 0.0, 0.0
 
         # 상태값
-        observation = get_state(world)
+        observation = get_state(world, get_path_features__DEFAULT, 0.0)
         if DEBUG: print(observation_str(observation), f' / GOAL({world.waypoint_idx}/{len(world.waypoints)}): {world.get_relative_angle_to_wpoint()/pi2*360:.1f}, {world.get_distance_to_wpoint():.1f}')
 
         # 액션 산출

@@ -29,8 +29,7 @@ from .env_utils import (
     speed_norm,
     distance_score_near,
     distance_score_far,
-    # get_path_features__ACC as get_path_features,
-    get_path_features__SRC as get_path_features,
+    get_path_features__SRC  as get_path_features__DEFAULT,
     observation_str,
     action_str,
     MyMetrics,
@@ -45,7 +44,10 @@ REWARD_METRIC_SIZE = 10
 
 
 
-def get_state(world:World):
+def get_state(world:World,
+              get_path_features:Callable[[World, float], list[float]],
+              path_noise_std:float,
+):
     """
     World의 현재 상태를 RL 입력 벡터(고정 크기)로 변환
     """
@@ -53,7 +55,7 @@ def get_state(world:World):
     s_norm = speed_norm(p.speed)
 
     # 경로 정보
-    path_data = get_path_features(world)
+    path_data = get_path_features(world, path_noise_std)
 
     # 라이다
     lidar_data = [distance_score_near(distance) if h else 0.0
@@ -85,6 +87,8 @@ class WorldEnv(gym.Env):
                  time_gain_per_waypoint_rate=500,
                  time_gain_limit=20_000,
                  collision_ending=True,
+                 get_path_features:Callable[[World, float], list[float]]=get_path_features__DEFAULT,
+                 path_noise_std:float=0.0,
                  render_mode:Literal['window','debug']|None=None,
                  auto_close_at_end=True):
 
@@ -99,6 +103,9 @@ class WorldEnv(gym.Env):
         self.time_gain_limit = time_gain_limit  # 남은 제한시간 최대량(천분초)
 
         self.collision_ending = collision_ending
+
+        self.get_path_features = get_path_features
+        self.path_noise_std = path_noise_std
 
         # Action: [A_forward, A_steer]
         self.action_space = spaces.Box(  # Forward, Steer
@@ -131,7 +138,7 @@ class WorldEnv(gym.Env):
 
     @property
     def observation(self):
-        return get_state(self.world)
+        return get_state(self.world, self.get_path_features, self.path_noise_std)
 
     @property
     def time_remaining(self):
