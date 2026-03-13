@@ -3,7 +3,7 @@ import os, time, random, json
 from collections import defaultdict
 
 from .world import World
-from .environment import WorldEnv
+from .environment import WorldEnv, get_path_features__DEFAULT
 from .common import (
     WORLD_DT,
     ACTION_REPEAT,
@@ -345,6 +345,7 @@ def run(
         time_spd=2.0,
         time_step=WORLD_DT,
         action_repeat=ACTION_REPEAT,
+        get_path_features:Callable[[World, float], list[float]]=get_path_features__DEFAULT,
         briefly=True,
         auto_close_at_end=True,
     ):
@@ -362,6 +363,7 @@ def run(
         world_generator=wgen,
         time_step=time_step,
         action_repeat=action_repeat  if briefly  else 1,
+        get_path_features=get_path_features,
         render_mode='debug',
         auto_close_at_end=auto_close_at_end
     )
@@ -399,6 +401,7 @@ def evaluate(
         *,
         time_step=WORLD_DT,
         action_repeat=ACTION_REPEAT,
+        get_path_features:Callable[[World, float], list[float]]=get_path_features__DEFAULT,
         print_result:bool=True,
         verbose:bool=True,
 ) -> dict:
@@ -409,6 +412,7 @@ def evaluate(
         world_generator=world_generator,
         time_step=time_step,
         action_repeat=action_repeat,
+        get_path_features=get_path_features,
         render_mode=None,
     )
 
