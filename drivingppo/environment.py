@@ -1,7 +1,7 @@
 """
 PPO 모델 설정값들, 훈련 환경과 훈련 함수들, 각종 변환 함수, 유틸 등.
 """
-from typing import Callable, Literal
+from typing import Any, Literal, Callable
 import math
 from datetime import datetime
 
@@ -181,7 +181,7 @@ class WorldEnv(gym.Env):
         self.wstep_count += wstep_count_step
         tfac = wstep_count_step * self.time_step / 1000.0  # 이번 환경스텝에서 흐른 시간 (초)
 
-        info = {'current_time': w.t_acc / 1000.0}
+        info:dict[str, Any] = {'current_time': w.t_acc / 1000.0}
 
         observation1 = self.observation
 
