@@ -95,13 +95,14 @@ def get_path_features__ACC(world:World, noise_std:float=0.0) -> list[float]:
     pz = world.player.z
     px += random.gauss(0, noise_std)
     pz += random.gauss(0, noise_std)
+    pa = world.player.angle_x
 
     for index_rel in range(LOOKAHEAD_POINTS):
         tx, tz = world.get_curr_wpoint(index_rel)
         tx += random.gauss(0, noise_std)
         tz += random.gauss(0, noise_std)
         d = distance_of(px, pz, tx, tz)
-        a = angle_of(px, pz, tx, tz)
+        a = angle_of(px, pz, tx, tz) - pa
 
         a = ((a + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
         d_near = distance_score_near(d)  # 거리 가까운 정도
