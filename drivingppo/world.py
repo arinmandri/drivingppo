@@ -690,7 +690,7 @@ class World:
         tx, tz = self.__waypoints[index]
         px, pz = self.player.x, self.player.z
 
-        return math.hypot(tx-px, tz-pz)
+        return distance_of(px, pz, tx, tz)
 
     def _get_absolute_angle_to_wpoint(self, index:int):
         """

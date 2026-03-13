@@ -1,5 +1,5 @@
 from typing import Callable, Literal
-import math
+import math, random
 from datetime import datetime
 
 from .world import World, distance_of, angle_of, pi, pi2, rad_to_deg
@@ -25,6 +25,7 @@ from .common import (
 import numpy as np
 from numpy import ndarray as Arr
 
+PATH_NOISE_STD = 0.00
 
 
 def speed_norm(speed):
@@ -59,27 +60,31 @@ def get_path_features__SRC(world:World) -> list[float]:
     path_data = []
     x0 = world.player.x
     z0 = world.player.z
+    x0 += random.gauss(0, PATH_NOISE_STD)
+    z0 += random.gauss(0, PATH_NOISE_STD)
     a0 = world.player.angle_x
 
     # 각 목표점의 거리, 각도 정보
     for index_rel in range(LOOKAHEAD_POINTS):
         # 이전 목표점 기준
         x1, z1 = world.get_curr_wpoint(index_rel)
-        d_from_prev = distance_of(x0, z0, x1, z1)
-        if d_from_prev == 0:
-            a_from_prev = 0
+        x1 += random.gauss(0, PATH_NOISE_STD)
+        z1 += random.gauss(0, PATH_NOISE_STD)
+        d = distance_of(x0, z0, x1, z1)
+        if d == 0:
+            a = 0
         else:
-            a1          = angle_of(x0, z0, x1, z1)
-            a_from_prev = a1 - a0
+            a1 = angle_of(x0, z0, x1, z1)
+            a = a1 - a0
             a0 = a1
         x0 = x1
         z0 = z1
 
-        a_fp_norm = ((a_from_prev + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
-        d_near = distance_score_near(d_from_prev)  # 거리 가까운 정도
-        d_far  = distance_score_far(d_from_prev)   # 거리 먼 정도
+        a = ((a + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
+        d_near = distance_score_near(d)  # 거리 가까운 정도
+        d_far  = distance_score_far(d)   # 거리 먼 정도
 
-        path_data.extend([a_fp_norm, math.cos(a_from_prev), d_near, d_far])
+        path_data.extend([a, math.cos(a), d_near, d_far])
 
     return path_data
 
@@ -88,14 +93,22 @@ def get_path_features__ACC(world:World) -> list[float]:
     경로 정보 - 에이전트 기준
     """
     path_data = []
+    px = world.player.x
+    pz = world.player.z
+    px += random.gauss(0, PATH_NOISE_STD)
+    pz += random.gauss(0, PATH_NOISE_STD)
 
     for index_rel in range(LOOKAHEAD_POINTS):
-        d_from_agnt = world.get_distance_to_wpoint(index_rel)
-        a_from_agnt = world.get_relative_angle_to_wpoint(index_rel)
-        a_fp_norm = ((a_from_agnt + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
-        d_near = distance_score_near(d_from_agnt)  # 거리 가까운 정도
-        d_far  = distance_score_far(d_from_agnt)   # 거리 먼 정도
-        path_data.extend([a_fp_norm, math.cos(a_from_agnt), d_near, d_far])
+        tx, tz = world.get_curr_wpoint(index_rel)
+        tx += random.gauss(0, PATH_NOISE_STD)
+        tz += random.gauss(0, PATH_NOISE_STD)
+        d = distance_of(px, pz, tx, tz)
+        a = angle_of(px, pz, tx, tz)
+
+        a = ((a + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
+        d_near = distance_score_near(d)  # 거리 가까운 정도
+        d_far  = distance_score_far(d)   # 거리 먼 정도
+        path_data.extend([a, math.cos(a), d_near, d_far])
 
     return path_data
 
