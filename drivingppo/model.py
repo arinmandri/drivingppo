@@ -48,14 +48,14 @@ class FE__I(BaseFeaturesExtractor):
 
 
 class FE__VMLP(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=16):
+    def __init__(self, observation_space: gym.spaces.Box, out_dim_per_wp=16):
 
-        total_feature_dim = 1 + LOOKAHEAD_POINTS * conv_out_channels  # WSWE와 동일한 최종 출력 차원
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * out_dim_per_wp  # WSWE와 동일한 최종 출력 차원
 
         super().__init__(observation_space, features_dim=total_feature_dim)
 
         path_input_dim = OBSERVATION_DIM - 1
-        path_output_dim = LOOKAHEAD_POINTS * conv_out_channels
+        path_output_dim = LOOKAHEAD_POINTS * out_dim_per_wp
 
         self.layer1 = nn.Sequential(
             nn.Linear(path_input_dim, 64),
@@ -65,26 +65,54 @@ class FE__VMLP(BaseFeaturesExtractor):
         )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        speed       = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
-        path_data   = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+        speed     = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
+        path_data = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
 
         path_output = self.layer1(path_data)
 
         return torch.cat((speed, path_output), dim=1)
 
 
+class FE__UWWE(BaseFeaturesExtractor):
+
+    def __init__(self, observation_space: gym.spaces.Box, out_dim_per_wp=16):
+
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * out_dim_per_wp
+
+        super().__init__(observation_space, features_dim=total_feature_dim)
+
+        self.layers = nn.ModuleList()
+        for _ in range(LOOKAHEAD_POINTS):
+            self.layers.append(nn.Sequential(
+                nn.Linear(EACH_POINT_INFO_SIZE, out_dim_per_wp),
+                nn.ReLU(),
+            ))
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        speed     = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
+        path_data = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+
+        outputs = [speed]
+        for i in range(LOOKAHEAD_POINTS):
+            wp_data = path_data[:, i * EACH_POINT_INFO_SIZE : (i+1) * EACH_POINT_INFO_SIZE]
+            wp_output = self.layers[i](wp_data)
+            outputs.append(wp_output)
+
+        return torch.cat(outputs, dim=1)
+
+
 class FE__WSWE(BaseFeaturesExtractor):
 
-    def __init__(self, observation_space: gym.spaces.Box, conv_out_channels=16):
+    def __init__(self, observation_space: gym.spaces.Box, out_dim_per_wp=16):
 
-        total_feature_dim = 1 + LOOKAHEAD_POINTS * conv_out_channels
+        total_feature_dim = 1 + LOOKAHEAD_POINTS * out_dim_per_wp
 
         super().__init__(observation_space, features_dim=total_feature_dim)
 
         self.layer1 = nn.Sequential(
             nn.Conv1d(
                 in_channels=1,
-                out_channels=conv_out_channels,
+                out_channels=out_dim_per_wp,
                 kernel_size=EACH_POINT_INFO_SIZE,
                 stride=EACH_POINT_INFO_SIZE,
                 padding=0),
@@ -93,8 +121,8 @@ class FE__WSWE(BaseFeaturesExtractor):
         )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        speed           = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
-        path_data       = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
+        speed     = observations[:, OBSERVATION_IND_SPD      : OBSERVATION_IND_SPD+1]
+        path_data = observations[:, OBSERVATION_IND_WPOINT_0 : OBSERVATION_IND_WPOINT_E]
 
         path_output = self.layer1(path_data.unsqueeze(1))
 
