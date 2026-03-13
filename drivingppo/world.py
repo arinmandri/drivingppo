@@ -328,14 +328,13 @@ class Car:
             self.speed += (drag + rolling) * dt
             if self.speed > 0:  self.speed = 0
 
-    def control_w(self, weight, dt):
+    def control_w(self, weight:float, dt:int):
         """
         전진 가속
         """
         if weight < 0: return
 
         # 마찰 적용
-        self.apply_drag_and_rolling(dt)
 
         # 후진 중: 브레이크
         if self.speed < 0:
@@ -348,13 +347,11 @@ class Car:
             f = self.engine_power * weight
             self.speed += f * dt
 
-    def control_s(self, weight, dt):
+    def control_s(self, weight:float, dt:int):
         """
         후진 가속
         """
         if weight < 0: return
-
-        self.apply_drag_and_rolling(dt)
 
         # 전진 중: 브레이크
         if self.speed > 0:
@@ -367,11 +364,10 @@ class Car:
             f = self.engine_power * weight
             self.speed -= f * dt
 
-    def control_stop(self, dt):
+    def control_stop(self, dt:int):
         """
         브레이크 동작
         """
-        self.apply_drag_and_rolling(dt)
 
         if self.speed > 0:
             self.speed -= self.stop * dt
@@ -386,7 +382,7 @@ class Car:
         """
         self.angle_x = (self.angle_x + self.turn_speed * weight * dt) % pi2
 
-    def step(self, dt) -> bool:
+    def step(self, dt:int) -> bool:
         """
         속도와 각도에 따라 위치를 이동한다.
         return 움직임 여부
@@ -445,7 +441,7 @@ class World:
         self.skip_waypoints_num:int   = config.get('skip_waypoints_num', 10)   # skip_past_waypoints에서 최대 몇 개를 건너뛸지
         self.lidar_real = config.get('lidar_real', True)  if ray_num >= 1  else False
 
-        self.t_acc = 0  # 에피소드 경과시간(XXX 현재 스스로 업데이트하지 않고 WorldController에서 받아오는데... 현재는 info 내보낼 때만 씀. 경과시간 관리를 WorldController 말고 여기서 하는 게 맞는지 고민중.)
+        self.t_acc:int = 0  # 에피소드 경과시간(XXX 현재 스스로 업데이트하지 않고 WorldController에서 받아오는데... 현재는 info 내보낼 때만 씀. 경과시간 관리를 WorldController 말고 여기서 하는 게 맞는지 고민중.)
 
         # 맵
         # wh, obstacle_map 둘 중 하나를 지정하면 나머지는 자동, 둘 다 없으면 기본
@@ -594,13 +590,14 @@ class World:
         # print([f'{a:.1f}' for a, _, _, _, _, _, _ in self.lidar_points])
         # [(angle, vertical_angle, distance, x,y,z, isDetected), ...]  Tank Challenge가 생성하는 csv 순서대로
 
-    def step(self, dt, callback:Callable|None=None) -> tuple[bool, bool, bool]:
+    def step(self, dt:int, callback:Callable|None=None) -> tuple[bool, bool, bool]:
         """
         Return: 플레이어 움직임?, 충돌?, 목표점도달?
         """
         if dt < 0: dt=0
         self.t_acc += dt
 
+        self.player.apply_drag_and_rolling(dt)
         self.control(dt)
 
         p = self.player
@@ -662,7 +659,7 @@ class World:
         return False
 
 
-    def control(self, dt):
+    def control(self, dt:int):
         """
         조작상태에 따라 동작
         """
@@ -673,8 +670,6 @@ class World:
                 self.player.control_w(self.ws, dt)
             elif self.ws < 0:
                 self.player.control_s(-self.ws, dt)
-            else:
-                self.player.apply_drag_and_rolling(dt)
 
         self.player.control_ad(self.ad, dt)
 

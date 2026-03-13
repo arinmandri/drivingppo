@@ -91,7 +91,7 @@ class MyPpoAdaptor:
         world = self.world
         world.player.status = info
         self.__adjust_speed_of_pooping_tank_challenge()
-        world.step(0.0)
+        world.step(0)
 
         # 도착했으면 그냥 STOP
         if world.arrived:
