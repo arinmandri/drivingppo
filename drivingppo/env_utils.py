@@ -69,7 +69,7 @@ def get_path_features__SRC(world:World, noise_std:float=0.0) -> list[float]:
         x1 += random.gauss(0, noise_std)
         z1 += random.gauss(0, noise_std)
         d = distance_of(x0, z0, x1, z1)
-        if d == 0:
+        if d < 1e-5:
             a = 0
         else:
             a1 = angle_of(x0, z0, x1, z1)
