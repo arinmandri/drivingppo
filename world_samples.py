@@ -54,7 +54,7 @@ def gen_obs():
             return generate_world_square(randint(30, 50), randint(30, 50), num=4)
         if choice < 5:
             return generate_world_zipper()
-    return gen_3t(10)
+    return gen_3t()
 
 def generate_random_world_plain(
         map_w=MAP_W,
@@ -469,7 +469,8 @@ def generate_random_waypoints(
     for i in range(num):
 
         # 랜덤 거리
-        distance = np.random.uniform(min_dist, max_dist)
+        if i  == 0: distance = init_dist
+        else:       distance = np.random.uniform(min_dist, max_dist)
 
         # 새 좌표 계산
         x = last_x + math.sin(angle) * distance
