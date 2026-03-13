@@ -369,7 +369,7 @@ def run(
     )
 
     if type(model) == str:
-        model = PPO.load(CHECKPOINT_DIR+model, env=env)
+        model = PPO.load(CHECKPOINT_DIR+model)
     assert isinstance(model, PPO)
 
     obs, info = env.reset()
