@@ -38,10 +38,10 @@ LOG_DIR = f"./logs/"
 CHECKPOINT_DIR = './checks/'
 
 
-class FE__I(BaseFeaturesExtractor):
+class FE__IDEN(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box, **noargs):
 
-        super(FE__I, self).__init__(observation_space, features_dim=OBSERVATION_DIM)
+        super(FE__IDEN, self).__init__(observation_space, features_dim=OBSERVATION_DIM)
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         return observations
@@ -198,7 +198,7 @@ def linear_schedule(start:float, end:float=0.0) -> Callable[[float], float]:
 
 def create_model(
         policy_kwargs=dict(
-            features_extractor_class=FE__I,
+            features_extractor_class=FE__IDEN,
             features_extractor_kwargs=dict(),
             net_arch=dict(
                 pi=[512, 512], # Actor
