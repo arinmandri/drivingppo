@@ -29,9 +29,9 @@ W_CONFIG = {
 }
 CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 학습한다곤 해도 목적지와 장애물이 이 이상 가깝지는 말자.  # 에이전트 대각선길이의 반  (1.5, 3)-->1.68
 
-def gen_2t(): return generate_random_world_plain(map_h= 60, map_w= 60, num=2,  init_dist=15.0,      min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=2.0)
-def gen_3t(): return generate_random_world_plain(map_h=300, map_w=300, num=50, init_dist=DIS_SCFAC, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-0.5)  # 학습용: 도달판정범위 약간 작게
-def gen_3l(): return generate_random_world_plain(map_h=300, map_w=300, num=10, init_dist=DIS_SCFAC, min_dist=NEAR*2, max_dist=DIS_SCFAC, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, )  # 테스트용
+def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=4,  init_dist=10.0, min_dist=10.0, max_dist=15.0, ang_lim=pi*1.0, ang_init='p',    spd_init=0.0, near=2.0)
+def gen_3t(): return generate_random_world_plain(map_h=300, map_w=300, num=20, init_dist=30.0, min_dist=15.0, max_dist=30.0, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-1.0)  # 학습용: 도달판정범위 약간 작게
+def gen_3l(): return generate_random_world_plain(map_h=300, map_w=300, num=10, init_dist=30.0, min_dist=15.0, max_dist=30.0, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, )  # 테스트용
 def gen_from(gen:Callable[[], World], seed, n):
     """seed 시드로 gen을 n번째 호출했을 때 생성되는 맵 반환"""
     set_seed(seed)
@@ -448,7 +448,7 @@ def generate_random_waypoints(
         angle_change_limit=pi/2,
         min_dist=NEAR*2,
         max_dist=DIS_SCFAC,
-        margin:int=5,
+        margin:int=-1,
         seed=None,
     ) -> list[tuple[float, float]]:
 
@@ -476,10 +476,11 @@ def generate_random_waypoints(
         z = last_z + math.cos(angle) * distance
 
         # 맵 경계 제한 (맵 밖으로 나가지 않게 클램핑)
-        if   x <  margin:       x = -x + margin*2
-        elif x >= map_w-margin: x = -x + (map_w - margin)*2
-        if   z <  margin:       z = -z + margin*2
-        elif z >= map_h-margin: z = -z + (map_h - margin)*2
+        if margin >= 0:
+            if   x <  margin:       x = -x + margin*2
+            elif x >= map_w-margin: x = -x + (map_w - margin)*2
+            if   z <  margin:       z = -z + margin*2
+            elif z >= map_h-margin: z = -z + (map_h - margin)*2
 
         # 좌표 추가
         waypoints.append((x, z))
