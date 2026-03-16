@@ -402,6 +402,7 @@ def evaluate(
         time_step=WORLD_DT,
         action_repeat=ACTION_REPEAT,
         get_path_features:Callable[[World, float], list[float]]=get_path_features__DEFAULT,
+        path_noise_std=0.0,
         print_result:bool=True,
         verbose:bool=True,
 ) -> dict:
@@ -413,6 +414,7 @@ def evaluate(
         time_step=time_step,
         action_repeat=action_repeat,
         get_path_features=get_path_features,
+        path_noise_std=path_noise_std,
         render_mode=None,
     )
 

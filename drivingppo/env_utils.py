@@ -122,9 +122,9 @@ def observation_str(observation):
     obs_wpoint_dist_2 = observation[OBSERVATION_IND_WPOINT_2 +3]
     return f'STATE:  speed {agent_speed:+.2f}({speed_norm(agent_speed):+.2f})'\
            f' | Path'\
-           f' [0] a:{obs_wpoint_afp_0*pi*rad_to_deg:+5.2f} d:{obs_wpoint_dist_0:.2f}'\
-           f' [1] a:{obs_wpoint_afp_1*pi*rad_to_deg:+5.2f} d:{obs_wpoint_dist_1:.2f}'\
-           f' [2] a:{obs_wpoint_afp_2*pi*rad_to_deg:+5.2f} d:{obs_wpoint_dist_2:.2f}'
+           f' [0] a:{obs_wpoint_afp_0*pi*rad_to_deg:+5.2f} d:{obs_wpoint_dist_0*DIS_SCFAC:.2f}'\
+           f' [1] a:{obs_wpoint_afp_1*pi*rad_to_deg:+5.2f} d:{obs_wpoint_dist_1*DIS_SCFAC:.2f}'\
+           f' [2] a:{obs_wpoint_afp_2*pi*rad_to_deg:+5.2f} d:{obs_wpoint_dist_2*DIS_SCFAC:.2f}'
 
 
 
