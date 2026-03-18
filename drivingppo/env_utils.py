@@ -78,11 +78,11 @@ def get_path_features__SRC(world:World, noise_std:float=0.0) -> list[float]:
         x0 = x1
         z0 = z1
 
-        a = ((a + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
+        a_norm = ((a + pi) % pi2 - pi) / pi  # 각도 -1 ~ 1
         d_near = distance_score_near(d)  # 거리 가까운 정도
         d_far  = distance_score_far(d)   # 거리 먼 정도
 
-        path_data.extend([a, math.cos(a), d_near, d_far])
+        path_data.extend([a_norm, math.cos(a), d_near, d_far])
 
     return path_data
 
@@ -104,10 +104,10 @@ def get_path_features__ACC(world:World, noise_std:float=0.0) -> list[float]:
         d = distance_of(px, pz, tx, tz)
         a = angle_of(px, pz, tx, tz) - pa
 
-        a = ((a + pi) % pi2 - pi) / pi  # 각도(이전 목표점 기준)
+        a_norm = ((a + pi) % pi2 - pi) / pi  # 각도 -1 ~ 1
         d_near = distance_score_near(d)  # 거리 가까운 정도
         d_far  = distance_score_far(d)   # 거리 먼 정도
-        path_data.extend([a, math.cos(a), d_near, d_far])
+        path_data.extend([a_norm, math.cos(a), d_near, d_far])
 
     return path_data
 
