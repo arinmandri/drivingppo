@@ -31,6 +31,7 @@ CAR_NEAR = math.sqrt(Car.w**2 + Car.h**2) / 2  # 장애물 피하기 기능을 �
 
 def gen_2t(): return generate_random_world_plain(map_h=150, map_w=150, num=4,  init_dist=10.0, min_dist=10.0, max_dist=15.0, ang_lim=pi*1.0, ang_init='p',    spd_init=0.0, near=2.0)
 def gen_3t(): return generate_random_world_plain(map_h=300, map_w=300, num=20, init_dist=30.0, min_dist=10.0, max_dist=30.0, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-0.3)  # 학습용: 도달판정범위 약간 작게
+def gen_4t(): return generate_random_world_plain(map_h=300, map_w=300, num=20, init_dist=30.0, min_dist=10.0, max_dist=30.0, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, near=NEAR-0.3, ang_dist='unif')
 def gen_3l(): return generate_random_world_plain(map_h=300, map_w=300, num=10, init_dist=30.0, min_dist=10.0, max_dist=30.0, ang_lim=pi*1.0, ang_init='half', spd_init=0.0, )  # 테스트용
 def gen_from(gen:Callable[[], World], seed, n):
     """seed 시드로 gen을 n번째 호출했을 때 생성되는 맵 반환"""
@@ -64,6 +65,7 @@ def generate_random_world_plain(
         max_dist=20.0,
         ang_init:float|Literal['p', 'half', 'rand', 'inv']='p',
         ang_lim=pi*0.5,
+        ang_dist:Literal['norm', 'unif']='norm',
         pos_init:Literal['corner', 'center']='center',
         spd_init:float|Literal['rand', 'half', 'posi']=0,
         near:float|None=None,
@@ -113,6 +115,7 @@ def generate_random_world_plain(
                                           px, pz,
                                           init_ang=init_ang,
                                           angle_change_limit=ang_lim,
+                                          ang_dist=ang_dist,
                                           init_dist=init_dist,
                                           min_dist=min_dist,
                                           max_dist=max_dist)
@@ -446,6 +449,7 @@ def generate_random_waypoints(
         init_ang,
         init_dist:float|None=None,
         angle_change_limit=pi/2,
+        ang_dist:Literal['norm', 'unif']='norm',
         min_dist=NEAR*2,
         max_dist=DIS_SCFAC,
         margin:int=-1,
@@ -486,7 +490,11 @@ def generate_random_waypoints(
         waypoints.append((x, z))
 
         # 랜덤 각도: 이전 각도에서 일정 이내로만 변화를 제한
-        angle_d = get_random_angle(angle_change_limit)
+        if ang_dist == 'norm':
+            angle_d = get_random_angle_norm(angle_change_limit)
+        elif ang_dist == 'unif':
+            angle_d = np.random.uniform(-angle_change_limit, angle_change_limit)
+        else: raise ValueError(f'invalid ang_dist: {ang_dist}')
         angle = angle_of(last_x, last_z, x, z) + angle_d
         angle = angle % pi2
 
@@ -496,7 +504,7 @@ def generate_random_waypoints(
     return waypoints
 
 
-def get_random_angle(a: float) -> float:
+def get_random_angle_norm(a: float) -> float:
     b = np.random.normal(0, a/pi*1.2, 1)
     while b < -a or a < b:
         b = np.random.normal(0, a/pi*1.2, 1)
