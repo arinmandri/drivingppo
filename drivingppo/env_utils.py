@@ -49,7 +49,7 @@ def distance_score_far(x:float) -> float:
     return x / DIS_SCFAC
 
 
-def get_path_features__SRC(world:World, noise_std:float=0.0) -> list[float]:
+def get_path_features__SRC(world:World) -> list[float]:
     """
     경로 정보
     바로 앞의 점 몇 개의 거리와 각도.
@@ -58,16 +58,12 @@ def get_path_features__SRC(world:World, noise_std:float=0.0) -> list[float]:
     path_data = []
     x0 = world.player.x
     z0 = world.player.z
-    x0 += random.gauss(0, noise_std)
-    z0 += random.gauss(0, noise_std)
     a0 = world.player.angle_x
 
     # 각 목표점의 거리, 각도 정보
     for index_rel in range(LOOKAHEAD_POINTS):
         # 이전 목표점 기준
         x1, z1 = world.get_curr_wpoint(index_rel)
-        x1 += random.gauss(0, noise_std)
-        z1 += random.gauss(0, noise_std)
         d = distance_of(x0, z0, x1, z1)
         if d < 1e-5:
             a = 0
@@ -86,21 +82,17 @@ def get_path_features__SRC(world:World, noise_std:float=0.0) -> list[float]:
 
     return path_data
 
-def get_path_features__ACC(world:World, noise_std:float=0.0) -> list[float]:
+def get_path_features__ACC(world:World) -> list[float]:
     """
     경로 정보 - 에이전트 기준
     """
     path_data = []
     px = world.player.x
     pz = world.player.z
-    px += random.gauss(0, noise_std)
-    pz += random.gauss(0, noise_std)
     pa = world.player.angle_x
 
     for index_rel in range(LOOKAHEAD_POINTS):
         tx, tz = world.get_curr_wpoint(index_rel)
-        tx += random.gauss(0, noise_std)
-        tz += random.gauss(0, noise_std)
         d = distance_of(px, pz, tx, tz)
         a = angle_of(px, pz, tx, tz) - pa
 

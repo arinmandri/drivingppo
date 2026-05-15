@@ -99,7 +99,7 @@ class MyPpoAdaptor:
             return True, 0.0, 0.0
 
         # 상태값
-        observation = get_state(world, get_path_features__DEFAULT, 0.0)
+        observation = get_state(world, get_path_features__DEFAULT)
         if DEBUG: print(observation_str(observation), f' / GOAL({world.waypoint_idx}/{len(world.waypoints)}): {world.get_relative_angle_to_wpoint()/pi2*360:.1f}, {world.get_distance_to_wpoint():.1f}')
 
         # 액션 산출
